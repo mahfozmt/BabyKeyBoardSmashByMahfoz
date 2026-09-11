@@ -1,2 +1,8 @@
 <Solution>
+  <Folder Name="/src/">
+    <Project Path="src/BabySmashBN/BabySmashBN.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/BabySmashBN.Tests/BabySmashBN.Tests.csproj" />
+  </Folder>
 </Solution>
