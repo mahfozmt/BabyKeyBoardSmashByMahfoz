@@ -33,6 +33,7 @@ public class KeyMapServiceTests
     public void Key_Digits_Map_Correctly_To_Bangla_Numerals(Key key, string expectedGlyph)
     {
         var content = _service.GetContentForKey(key);
+        Assert.False(content.IsShape);
         Assert.Equal(expectedGlyph, content.Glyph);
     }
 
@@ -44,6 +45,7 @@ public class KeyMapServiceTests
     public void Key_Letters_Map_Correctly_To_Bangla_Characters(Key key, string expectedGlyph)
     {
         var content = _service.GetContentForKey(key);
+        Assert.False(content.IsShape);
         Assert.Equal(expectedGlyph, content.Glyph);
     }
 
@@ -52,21 +54,48 @@ public class KeyMapServiceTests
     {
         // 0x31 is VK '1'
         var content1 = _service.GetContentForVirtualKey(0x31);
+        Assert.False(content1.IsShape);
         Assert.Equal("১", content1.Glyph);
 
         // 0x33 is VK '3'
         var content3 = _service.GetContentForVirtualKey(0x33);
+        Assert.False(content3.IsShape);
         Assert.Equal("৩", content3.Glyph);
     }
 
-    [Fact]
-    public void Space_And_Return_Return_Celebrations()
+    [Theory]
+    [InlineData(Key.Space)]
+    [InlineData(Key.Return)]
+    [InlineData(Key.Back)]
+    [InlineData(Key.Tab)]
+    [InlineData(Key.Left)]
+    [InlineData(Key.Right)]
+    [InlineData(Key.F5)]
+    public void Non_Alphanumeric_Keys_Return_Shapes_With_Funny_Sounds(Key key)
     {
-        var spaceContent = _service.GetContentForKey(Key.Space);
-        Assert.Contains("দারুণ", spaceContent.Glyph);
+        var content = _service.GetContentForKey(key);
+        Assert.True(content.IsShape);
+        Assert.NotNull(content.ShapeType);
+        Assert.NotEmpty(content.ShapeType);
+        Assert.NotNull(content.SecondaryText); // Bangla shape name like তারা, হৃদয়, বৃত্ত
+        Assert.NotNull(content.SfxPath);       // Funny sound
+        Assert.Null(content.Glyph);            // No letter or number
+    }
 
-        var returnContent = _service.GetContentForKey(Key.Return);
-        Assert.Contains("সাবাশ", returnContent.Glyph);
+    [Fact]
+    public void VirtualKey_Non_Alphanumeric_Returns_Shape()
+    {
+        // VK_SPACE is 0x20
+        var spaceContent = _service.GetContentForVirtualKey(0x20);
+        Assert.True(spaceContent.IsShape);
+        Assert.NotNull(spaceContent.ShapeType);
+        Assert.NotNull(spaceContent.SfxPath);
+
+        // VK_RETURN is 0x0D
+        var returnContent = _service.GetContentForVirtualKey(0x0D);
+        Assert.True(returnContent.IsShape);
+        Assert.NotNull(returnContent.ShapeType);
+        Assert.NotNull(returnContent.SfxPath);
     }
 
     [Fact]

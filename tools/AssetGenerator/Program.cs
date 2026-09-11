@@ -108,6 +108,56 @@ class Program
                 return (fundamental + overtone) * env * 0.8;
             });
         }
+
+        // 7. Slide Whistle (classic cartoon whoop up)
+        WriteWav(Path.Combine(sfxDir, "slide_whistle.wav"), 0.50, (t, d) =>
+        {
+            double progress = t / d;
+            double freq = 400.0 + Math.Pow(progress, 1.8) * 1200.0;
+            double env = Math.Sin(Math.PI * progress);
+            return Math.Sin(2.0 * Math.PI * freq * t) * env * 0.85;
+        });
+
+        // 8. Twang (cartoon jaw-harp bounce)
+        WriteWav(Path.Combine(sfxDir, "twang.wav"), 0.40, (t, d) =>
+        {
+            double vib = Math.Sin(2.0 * Math.PI * 24.0 * t) * 60.0;
+            double freq = 180.0 * Math.Exp(-t * 3.0) + vib;
+            double env = Math.Exp(-t * 6.0);
+            double h1 = Math.Sin(2.0 * Math.PI * freq * t);
+            double h2 = Math.Sin(2.0 * Math.PI * (freq * 2.0) * t) * 0.5;
+            double h3 = Math.Sin(2.0 * Math.PI * (freq * 3.0) * t) * 0.25;
+            return (h1 + h2 + h3) * env * 0.85;
+        });
+
+        // 9. Squeak (rubber toy squeak)
+        WriteWav(Path.Combine(sfxDir, "squeak.wav"), 0.22, (t, d) =>
+        {
+            double freq = 1200.0 + Math.Sin(2.0 * Math.PI * 14.0 * t) * 350.0;
+            double env = Math.Sin(Math.PI * (t / d));
+            return Math.Sin(2.0 * Math.PI * freq * t) * env * 0.75;
+        });
+
+        // 10. Wobble (goofy jelly wobble)
+        WriteWav(Path.Combine(sfxDir, "wobble.wav"), 0.45, (t, d) =>
+        {
+            double wobbleFreq = 260.0 + Math.Sin(2.0 * Math.PI * 10.0 * t) * 90.0;
+            double tremolo = 0.5 + 0.5 * Math.Sin(2.0 * Math.PI * 20.0 * t);
+            double env = Math.Pow(1.0 - (t / d), 1.2);
+            return Math.Sin(2.0 * Math.PI * wobbleFreq * t) * tremolo * env * 0.9;
+        });
+
+        // 11. Quack (funny cartoon honk)
+        WriteWav(Path.Combine(sfxDir, "quack.wav"), 0.30, (t, d) =>
+        {
+            double f1 = 450.0;
+            double f2 = 900.0;
+            double env = Math.Sin(Math.PI * (t / d));
+            double tone = Math.Sin(2.0 * Math.PI * f1 * t) * 0.6 + Math.Sin(2.0 * Math.PI * f2 * t) * 0.4;
+            // Add a little harshness for cartoon quack
+            tone = Math.Max(-0.8, Math.Min(0.8, tone * 1.5));
+            return tone * env * 0.8;
+        });
     }
 
     static void WriteWav(string path, double durationSeconds, Func<double, double, double> generator, int sampleRate = 44100)

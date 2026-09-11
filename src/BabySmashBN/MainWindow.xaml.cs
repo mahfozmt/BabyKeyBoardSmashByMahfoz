@@ -41,7 +41,7 @@ public partial class MainWindow : Window
         string assetsDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Assets");
         _keyMapService = new KeyMapService(assetsDir);
         _audioService = new AudioService();
-        _renderService = new RenderService(SmashCanvas);
+        _renderService = new RenderService(SmashCanvas, _audioService);
         _mouseTrail = new MouseTrailService(SmashCanvas);
 
         // 4. Timer for 2-second hold Escape to exit

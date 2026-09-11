@@ -15,10 +15,37 @@ public class KeyMapService : IKeyMapService
     private readonly string _assetsDir;
     private readonly List<string> _emojiFiles = new();
     private readonly List<string> _sfxFiles = new();
+    private readonly List<string> _funnySfxFiles = new();
 
     private readonly Dictionary<string, (string Glyph, string? Word, string? Voice)> _digitMap = new();
     private readonly Dictionary<string, (string Glyph, string? Word, string? Voice)> _letterMap = new();
-    private readonly Dictionary<string, (string Glyph, string? Voice, string? Sfx)> _specialMap = new();
+
+    private static readonly (string Type, string NameBn)[] SupportedShapes = new[]
+    {
+        ("Star", "তারা"),
+        ("Heart", "হৃদয়"),
+        ("Circle", "বৃত্ত"),
+        ("Triangle", "ত্রিভুজ"),
+        ("Square", "চতুর্ভুজ"),
+        ("Diamond", "হীরা"),
+        ("Moon", "চাঁদ"),
+        ("Sun", "সূর্য"),
+        ("Cloud", "মেঘ")
+    };
+
+    private static readonly string[] FunnySoundNames = new[]
+    {
+        "slide_whistle.wav",
+        "twang.wav",
+        "squeak.wav",
+        "wobble.wav",
+        "quack.wav",
+        "boing.wav",
+        "spring.wav",
+        "pop.wav",
+        "drum.wav",
+        "bell.wav"
+    };
 
     private static readonly Color[] Palette = new[]
     {
@@ -103,15 +130,6 @@ public class KeyMapService : IKeyMapService
 
         foreach (var kvp in defaultLetters) _letterMap[kvp.Key] = kvp.Value;
 
-        var defaultSpecial = new Dictionary<string, (string, string?, string?)>
-        {
-            { "Space", ("দারুণ!", "cheer_1.mp3", "chime.wav") },
-            { "Return", ("সাবাশ!", "cheer_2.mp3", "bell.wav") },
-            { "Back", ("বাহ্!", "cheer_3.mp3", "pop.wav") }
-        };
-
-        foreach (var kvp in defaultSpecial) _specialMap[kvp.Key] = kvp.Value;
-
         // 2. Try loading keymap.json from disk to allow user customization
         string jsonPath = Path.Combine(_assetsDir, "keymap.json");
         if (File.Exists(jsonPath))
@@ -142,17 +160,6 @@ public class KeyMapService : IKeyMapService
                         _letterMap[prop.Name] = (glyph, word, voice);
                     }
                 }
-
-                if (root.TryGetProperty("special", out var specialEl))
-                {
-                    foreach (var prop in specialEl.EnumerateObject())
-                    {
-                        string glyph = prop.Value.GetProperty("glyph").GetString() ?? "";
-                        string? voice = prop.Value.TryGetProperty("voice", out var v) ? v.GetString() : null;
-                        string? sfx = prop.Value.TryGetProperty("sfx", out var s) ? s.GetString() : null;
-                        _specialMap[prop.Name] = (glyph, voice, sfx);
-                    }
-                }
             }
             catch (Exception ex)
             {
@@ -173,6 +180,15 @@ public class KeyMapService : IKeyMapService
         if (Directory.Exists(sfxDir))
         {
             _sfxFiles.AddRange(Directory.GetFiles(sfxDir, "*.wav"));
+
+            foreach (var fn in FunnySoundNames)
+            {
+                string p = Path.Combine(sfxDir, fn);
+                if (File.Exists(p))
+                {
+                    _funnySfxFiles.Add(p);
+                }
+            }
         }
     }
 
@@ -199,71 +215,67 @@ public class KeyMapService : IKeyMapService
             return BuildContentForLetter(letter.ToString());
         }
 
-        // 4. Space (VK 0x20)
-        if (vkCode == 0x20)
-        {
-            return BuildContentForSpecial("Space");
-        }
-
-        // 5. Enter (VK 0x0D)
-        if (vkCode == 0x0D)
-        {
-            return BuildContentForSpecial("Return");
-        }
-
-        // 6. Backspace (VK 0x08)
-        if (vkCode == 0x08)
-        {
-            return BuildContentForSpecial("Back");
-        }
-
-        // Fallback: Return a random festive Bangla character/emoji
-        return GetRandomContent();
+        // 4. Space, Enter, Backspace, Arrows, Tab, Function keys, Symbols, etc. -> Shapes with Funny Sounds!
+        return GetRandomShapeContent();
     }
 
     public SmashContent GetContentForKey(Key key)
     {
         string keyName = key.ToString();
 
+        // 1. Check if key is a digit
         if (_digitMap.ContainsKey(keyName))
         {
             return BuildContentForDigit(keyName);
         }
 
+        // 2. Check if key is a letter
         if (_letterMap.ContainsKey(keyName))
         {
             return BuildContentForLetter(keyName);
         }
 
-        if (_specialMap.ContainsKey(keyName))
-        {
-            return BuildContentForSpecial(keyName);
-        }
-
-        return GetRandomContent();
+        // 3. Any other key (Space, Return, Back, Tab, Arrows, etc.) -> Shapes with Funny Sounds!
+        return GetRandomShapeContent();
     }
 
     public SmashContent GetRandomContent()
     {
-        // Pick either a random digit or a random letter
-        if (_random.Next(2) == 0 && _digitMap.Count > 0)
+        // 3-way random: 40% Shape, 30% Letter, 30% Number
+        int roll = _random.Next(10);
+        if (roll < 4)
         {
-            var keys = _digitMap.Keys.ToList();
-            return BuildContentForDigit(keys[_random.Next(keys.Count)]);
+            return GetRandomShapeContent();
         }
-        else if (_letterMap.Count > 0)
+        else if (roll < 7 && _letterMap.Count > 0)
         {
             var keys = _letterMap.Keys.ToList();
             return BuildContentForLetter(keys[_random.Next(keys.Count)]);
         }
+        else if (_digitMap.Count > 0)
+        {
+            var keys = _digitMap.Keys.ToList();
+            return BuildContentForDigit(keys[_random.Next(keys.Count)]);
+        }
+
+        return GetRandomShapeContent();
+    }
+
+    public SmashContent GetRandomShapeContent()
+    {
+        var shape = SupportedShapes[_random.Next(SupportedShapes.Length)];
+        string? emoji = PickMatchingShapeEmoji(shape.Type);
+        string? sfx = PickFunnySfx();
 
         return new SmashContent(
-            Glyph: "★",
-            SecondaryText: null,
-            EmojiPath: PickRandomEmoji(),
+            Glyph: null,
+            ShapeType: shape.Type,
+            SecondaryText: shape.NameBn,
+            EmojiPath: emoji,
             Color: PickRandomColor(),
-            SfxPath: PickRandomSfx(),
-            VoicePath: null
+            SfxPath: sfx,
+            VoicePath: null,
+            IsShape: true
         );
     }
 
@@ -277,11 +289,13 @@ public class KeyMapService : IKeyMapService
         string? voicePath = ResolveVoicePath(val.Voice);
         return new SmashContent(
             Glyph: val.Glyph,
+            ShapeType: null,
             SecondaryText: val.Word,
             EmojiPath: PickRandomEmoji(),
             Color: PickRandomColor(),
             SfxPath: PickRandomSfx(),
-            VoicePath: voicePath
+            VoicePath: voicePath,
+            IsShape: false
         );
     }
 
@@ -295,31 +309,13 @@ public class KeyMapService : IKeyMapService
         string? voicePath = ResolveVoicePath(val.Voice);
         return new SmashContent(
             Glyph: val.Glyph,
+            ShapeType: null,
             SecondaryText: val.Word,
             EmojiPath: PickRandomEmoji(),
             Color: PickRandomColor(),
             SfxPath: PickRandomSfx(),
-            VoicePath: voicePath
-        );
-    }
-
-    private SmashContent BuildContentForSpecial(string key)
-    {
-        if (!_specialMap.TryGetValue(key, out var val))
-        {
-            val = ("দারুণ!", "cheer_1.mp3", "chime.wav");
-        }
-
-        string? sfxPath = val.Sfx != null ? Path.Combine(_assetsDir, "Sounds", "Sfx", val.Sfx) : PickRandomSfx();
-        string? voicePath = ResolveVoicePath(val.Voice);
-
-        return new SmashContent(
-            Glyph: val.Glyph,
-            SecondaryText: null,
-            EmojiPath: PickRandomEmoji(),
-            Color: PickRandomColor(),
-            SfxPath: sfxPath,
-            VoicePath: voicePath
+            VoicePath: voicePath,
+            IsShape: false
         );
     }
 
@@ -336,10 +332,34 @@ public class KeyMapService : IKeyMapService
         return _emojiFiles[_random.Next(_emojiFiles.Count)];
     }
 
+    private string? PickMatchingShapeEmoji(string shapeType)
+    {
+        string? match = shapeType switch
+        {
+            "Star" => _emojiFiles.FirstOrDefault(f => f.Contains("star")),
+            "Heart" => _emojiFiles.FirstOrDefault(f => f.Contains("heart")),
+            "Sun" => _emojiFiles.FirstOrDefault(f => f.Contains("sun")),
+            "Moon" => _emojiFiles.FirstOrDefault(f => f.Contains("sparkles") || f.Contains("star")),
+            "Circle" => _emojiFiles.FirstOrDefault(f => f.Contains("soccer") || f.Contains("balloon")),
+            _ => null
+        };
+
+        return match ?? PickRandomEmoji();
+    }
+
     private string? PickRandomSfx()
     {
         if (_sfxFiles.Count == 0) return null;
         return _sfxFiles[_random.Next(_sfxFiles.Count)];
+    }
+
+    private string? PickFunnySfx()
+    {
+        if (_funnySfxFiles.Count > 0)
+        {
+            return _funnySfxFiles[_random.Next(_funnySfxFiles.Count)];
+        }
+        return PickRandomSfx();
     }
 
     private Color PickRandomColor()
