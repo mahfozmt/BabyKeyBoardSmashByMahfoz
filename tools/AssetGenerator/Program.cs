@@ -4,6 +4,8 @@ using System.IO;
 using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
+using NAudio.Wave;
+using NAudio.Wave.SampleProviders;
 
 namespace AssetGenerator;
 
@@ -11,7 +13,7 @@ class Program
 {
     static async Task Main(string[] args)
     {
-        string baseDir = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "../../../../src/BabySmashBN/Assets/Sounds"));
+        string baseDir = Path.Combine(FindRepoRoot(), "src", "BabySmashBN", "Assets", "Sounds");
         string sfxDir = Path.Combine(baseDir, "Sfx");
         string voiceDir = Path.Combine(baseDir, "Voice");
 
@@ -25,6 +27,153 @@ class Program
         await DownloadBanglaVoiceClips(voiceDir);
 
         Console.WriteLine("All audio assets are ready!");
+
+        TestAudioPlayback(baseDir);
+    }
+
+    static string FindRepoRoot()
+    {
+        var dir = new DirectoryInfo(AppContext.BaseDirectory);
+        while (dir != null && !File.Exists(Path.Combine(dir.FullName, "KeyBoardSmashByMahfoz.slnx")) && !Directory.Exists(Path.Combine(dir.FullName, "src")))
+        {
+            dir = dir.Parent;
+        }
+        return dir?.FullName ?? AppContext.BaseDirectory;
+    }
+
+    static void TestAudioPlayback(string baseDir)
+    {
+        Console.WriteLine("\n--- Testing Audio Devices ---");
+
+        try
+        {
+            Console.WriteLine("Testing WaveOutEvent playback...");
+            var targetFormat = WaveFormat.CreateIeeeFloatWaveFormat(44100, 2);
+            var waveOut = new WaveOutEvent { DesiredLatency = 100 };
+            var mixer = new MixingSampleProvider(targetFormat) { ReadFully = true };
+            waveOut.Init(mixer);
+            waveOut.Play();
+
+            string testWav = Path.Combine(baseDir, "Sfx", "boing.wav");
+            var csWav = LoadSound(testWav, targetFormat);
+            Console.WriteLine($"Adding boing.wav ({csWav.Length} samples) to mixer...");
+            mixer.AddMixerInput(new CachedSoundSampleProvider(new CachedSoundForTest(csWav, targetFormat)));
+            System.Threading.Thread.Sleep(600); // Wait for playback
+            Console.WriteLine("WaveOutEvent playback test completed.");
+            waveOut.Stop();
+            waveOut.Dispose();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"WaveOutEvent FAILED: {ex}");
+        }
+
+        try
+        {
+            Console.WriteLine("Testing WasapiOut playback...");
+            var targetFormat = WaveFormat.CreateIeeeFloatWaveFormat(44100, 2);
+            var wasapi = new WasapiOut(NAudio.CoreAudioApi.AudioClientShareMode.Shared, 100);
+            var mixer = new MixingSampleProvider(targetFormat) { ReadFully = true };
+            wasapi.Init(mixer);
+            wasapi.Play();
+
+            string testWav = Path.Combine(baseDir, "Sfx", "chime.wav");
+            var csWav = LoadSound(testWav, targetFormat);
+            Console.WriteLine($"Adding chime.wav ({csWav.Length} samples) to Wasapi mixer...");
+            mixer.AddMixerInput(new CachedSoundSampleProvider(new CachedSoundForTest(csWav, targetFormat)));
+            System.Threading.Thread.Sleep(800); // Wait for playback
+            Console.WriteLine("WasapiOut playback test completed.");
+            wasapi.Stop();
+            wasapi.Dispose();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"WasapiOut FAILED: {ex}");
+        }
+
+        try
+        {
+            string testWav = Path.Combine(baseDir, "Sfx", "pop.wav");
+            string testMp3 = Path.Combine(baseDir, "Voice", "num_1.mp3");
+
+            Console.WriteLine($"Testing AudioFileReader on {testWav}...");
+            using (var r = new AudioFileReader(testWav))
+            {
+                Console.WriteLine($"WAV format: {r.WaveFormat}, Length: {r.Length}");
+            }
+
+            Console.WriteLine($"Testing AudioFileReader on {testMp3}...");
+            using (var r = new AudioFileReader(testMp3))
+            {
+                Console.WriteLine($"MP3 format: {r.WaveFormat}, Length: {r.Length}");
+            }
+
+            Console.WriteLine("Testing CachedSound on testWav and testMp3...");
+            var targetFmt = WaveFormat.CreateIeeeFloatWaveFormat(44100, 2);
+            var csWav = LoadSound(testWav, targetFmt);
+            Console.WriteLine($"Cached WAV samples: {csWav.Length}");
+            var csMp3 = LoadSound(testMp3, targetFmt);
+            Console.WriteLine($"Cached MP3 samples: {csMp3.Length}");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"FileReader FAILED: {ex}");
+        }
+    }
+
+    static float[] LoadSound(string audioFileName, WaveFormat targetFormat)
+    {
+        using var reader = new AudioFileReader(audioFileName);
+        ISampleProvider provider = reader;
+
+        if (provider.WaveFormat.Channels == 1 && targetFormat.Channels == 2)
+        {
+            provider = new MonoToStereoSampleProvider(provider);
+        }
+
+        if (provider.WaveFormat.SampleRate != targetFormat.SampleRate)
+        {
+            provider = new WdlResamplingSampleProvider(provider, targetFormat.SampleRate);
+        }
+
+        var wholeFile = new List<float>((int)(reader.Length / 4));
+        var readBuffer = new float[targetFormat.SampleRate * targetFormat.Channels];
+        int samplesRead;
+        while ((samplesRead = provider.Read(readBuffer, 0, readBuffer.Length)) > 0)
+        {
+            for (int i = 0; i < samplesRead; i++)
+            {
+                wholeFile.Add(readBuffer[i]);
+            }
+        }
+        return wholeFile.ToArray();
+    }
+
+    class CachedSoundForTest
+    {
+        public float[] AudioData { get; }
+        public WaveFormat WaveFormat { get; }
+        public CachedSoundForTest(float[] data, WaveFormat format)
+        {
+            AudioData = data;
+            WaveFormat = format;
+        }
+    }
+
+    class CachedSoundSampleProvider : ISampleProvider
+    {
+        private readonly CachedSoundForTest _sound;
+        private long _position;
+        public CachedSoundSampleProvider(CachedSoundForTest sound) => _sound = sound;
+        public WaveFormat WaveFormat => _sound.WaveFormat;
+        public int Read(float[] buffer, int offset, int count)
+        {
+            var availableSamples = _sound.AudioData.Length - _position;
+            var samplesToCopy = Math.Min(availableSamples, count);
+            Array.Copy(_sound.AudioData, _position, buffer, offset, samplesToCopy);
+            _position += samplesToCopy;
+            return (int)samplesToCopy;
+        }
     }
 
     static void GenerateProceduralSfx(string sfxDir)

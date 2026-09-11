@@ -18,6 +18,9 @@
 
   <ItemGroup>
     <Resource Include="Assets\Fonts\**" />
+    <Content Include="Assets\Fonts\**">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
     <Content Include="Assets\Emoji\**">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>

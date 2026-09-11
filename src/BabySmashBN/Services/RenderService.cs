@@ -31,7 +31,7 @@ public class RenderService : IRenderService
         _audioService = audioService;
         _maxConcurrentBursts = maxConcurrentBursts;
 
-        // Try loading embedded or local font
+        // Try loading local font or embedded WPF resource font
         string localFontPath = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Assets", "Fonts", "BalooDa2.ttf");
         if (File.Exists(localFontPath))
         {
@@ -39,7 +39,14 @@ public class RenderService : IRenderService
         }
         else
         {
-            _banglaFont = new FontFamily("Segoe UI, Arial");
+            try
+            {
+                _banglaFont = new FontFamily(new Uri("pack://application:,,,/"), "./Assets/Fonts/#Baloo Da 2");
+            }
+            catch
+            {
+                _banglaFont = new FontFamily("Segoe UI, Kalpurush, SolaimanLipi, Arial");
+            }
         }
     }
 
