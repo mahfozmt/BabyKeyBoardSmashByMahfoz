@@ -3,4 +3,5 @@ obj/
 *.user
 .vs/
 publish/
+dist/
 *.suo

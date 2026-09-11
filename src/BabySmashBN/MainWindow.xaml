@@ -1,12 +1,159 @@
-﻿<Window x:Class="BabySmashBN.MainWindow"
+<Window x:Class="BabySmashBN.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:local="clr-namespace:BabySmashBN"
-        mc:Ignorable="d"
-        Title="MainWindow" Height="450" Width="800">
+        Title="বেবিস্ম্যাশ (BabySmash-BN)"
+        WindowStyle="None"
+        WindowState="Maximized"
+        Topmost="True"
+        ResizeMode="NoResize"
+        Background="#181825"
+        ShowInTaskbar="False"
+        Focusable="True">
+    
     <Grid>
+        <!-- Fullscreen Canvas for bursts, animations, and particle trails -->
+        <Canvas x:Name="SmashCanvas" 
+                Background="Transparent"
+                ClipToBounds="True" />
 
+        <!-- Welcome watermark / instructions for parent (fades away automatically) -->
+        <Border x:Name="WelcomeBanner"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Top"
+                Margin="0,30,0,0"
+                Background="#33000000"
+                CornerRadius="20"
+                Padding="24,12"
+                IsHitTestVisible="False">
+            <StackPanel Orientation="Vertical" HorizontalAlignment="Center">
+                <TextBlock Text="বেবিস্ম্যাশ (BabySmash-BN)" 
+                           FontSize="24" 
+                           FontWeight="Bold" 
+                           Foreground="#F5C2E7"
+                           HorizontalAlignment="Center"/>
+                <TextBlock Text="কীবোর্ড চাপুন বা ক্লিক করুন | বের হতে Alt+F4 চাপুন অথবা Esc চেপে ধরে রাখুন" 
+                           FontSize="14" 
+                           Foreground="#CDD6F4"
+                           Margin="0,4,0,0"
+                           HorizontalAlignment="Center"/>
+            </StackPanel>
+        </Border>
+
+        <!-- Top-Right Parent Corner Controls (Subtle & protected) -->
+        <StackPanel HorizontalAlignment="Right" 
+                    VerticalAlignment="Top" 
+                    Margin="0,20,20,0"
+                    Orientation="Vertical">
+            <Button x:Name="BtnParentToggle"
+                    Width="40" Height="40"
+                    Background="#26313244"
+                    BorderBrush="#45475A"
+                    BorderThickness="1"
+                    Foreground="#CDD6F4"
+                    Content="⚙️"
+                    FontSize="18"
+                    Cursor="Hand"
+                    ToolTip="অভিভাবক মেনু (Parent Menu)"
+                    Click="BtnParentToggle_Click">
+                <Button.Resources>
+                    <Style TargetType="Border">
+                        <Setter Property="CornerRadius" Value="20"/>
+                    </Style>
+                </Button.Resources>
+            </Button>
+
+            <!-- Parent Flyout Settings -->
+            <Border x:Name="ParentFlyout"
+                    Visibility="Collapsed"
+                    Background="#1E1E2E"
+                    BorderBrush="#45475A"
+                    BorderThickness="1"
+                    CornerRadius="12"
+                    Padding="16"
+                    Margin="0,10,0,0"
+                    Width="220">
+                <StackPanel Orientation="Vertical">
+                    <TextBlock Text="অভিভাবক নিয়ন্ত্রণ" 
+                               FontWeight="Bold" 
+                               Foreground="#CBA6F7"
+                               FontSize="16"
+                               Margin="0,0,0,10"/>
+                    
+                    <CheckBox x:Name="ChkVoice" 
+                              Content="বাংলা উচ্চারণ (Voice)" 
+                              IsChecked="True" 
+                              Foreground="#CDD6F4"
+                              Margin="0,0,0,8"
+                              Checked="ChkVoice_Changed"
+                              Unchecked="ChkVoice_Changed"/>
+
+                    <CheckBox x:Name="ChkSfx" 
+                              Content="খেলনা শব্দ (Toy SFX)" 
+                              IsChecked="True" 
+                              Foreground="#CDD6F4"
+                              Margin="0,0,0,8"
+                              Checked="ChkSfx_Changed"
+                              Unchecked="ChkSfx_Changed"/>
+
+                    <CheckBox x:Name="ChkCursor" 
+                              Content="স্মাইলি কার্সর (Follower)" 
+                              IsChecked="True" 
+                              Foreground="#CDD6F4"
+                              Margin="0,0,0,14"
+                              Checked="ChkCursor_Changed"
+                              Unchecked="ChkCursor_Changed"/>
+
+                    <Button Content="অ্যাপ বন্ধ করুন (Exit)"
+                            Background="#F38BA8"
+                            Foreground="#11111B"
+                            FontWeight="Bold"
+                            Padding="8,6"
+                            BorderThickness="0"
+                            Click="BtnExit_Click">
+                        <Button.Resources>
+                            <Style TargetType="Border">
+                                <Setter Property="CornerRadius" Value="6"/>
+                            </Style>
+                        </Button.Resources>
+                    </Button>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+
+        <!-- Escape Hold-to-Exit Visual Ring / Banner Overlay -->
+        <Border x:Name="ExitOverlay"
+                Visibility="Collapsed"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center"
+                Background="#EE11111B"
+                BorderBrush="#F38BA8"
+                BorderThickness="2"
+                CornerRadius="24"
+                Padding="36,28"
+                Width="380">
+            <StackPanel Orientation="Vertical" HorizontalAlignment="Center">
+                <TextBlock Text="অ্যাপ বন্ধ হচ্ছে..." 
+                           FontSize="22" 
+                           FontWeight="Bold" 
+                           Foreground="#F38BA8"
+                           HorizontalAlignment="Center"/>
+                
+                <TextBlock Text="Esc চেপে ধরে রাখুন (Hold Esc)" 
+                           FontSize="14" 
+                           Foreground="#CDD6F4"
+                           Margin="0,6,0,14"
+                           HorizontalAlignment="Center"/>
+
+                <ProgressBar x:Name="ExitProgressBar"
+                             Height="12"
+                             Width="300"
+                             Minimum="0"
+                             Maximum="2000"
+                             Value="0"
+                             Foreground="#F38BA8"
+                             Background="#313244"
+                             BorderThickness="0"/>
+            </StackPanel>
+        </Border>
     </Grid>
 </Window>

@@ -1,5 +1,6 @@
 <Solution>
   <Folder Name="/src/">
+    <Project Path="src/BabySmashBN.Core/BabySmashBN.Core.csproj" />
     <Project Path="src/BabySmashBN/BabySmashBN.csproj" />
   </Folder>
   <Folder Name="/tests/">

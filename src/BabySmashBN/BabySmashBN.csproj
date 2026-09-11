@@ -13,6 +13,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\BabySmashBN.Core\BabySmashBN.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Resource Include="Assets\Fonts\**" />
     <Content Include="Assets\Emoji\**">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
