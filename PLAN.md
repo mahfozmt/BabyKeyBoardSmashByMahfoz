@@ -1,236 +1,307 @@
 # বেবিস্ম্যাশ (BabySmash-BN) — Bangla Keyboard-Smash App for Windows
 
-Implementation plan for a from-scratch Windows desktop app, inspired by Scott Hanselman's
-[BabySmash](https://github.com/shanselman/babysmash), but fully in Bangla: Bangla digits/letters,
-open-source Bangla font, open-source emoji as shapes, and collected sound effects.
-
-Goal: a toddler mashes the keyboard → fullscreen app shows a big colorful Bangla character/emoji
-with a sound, and nothing else on the PC is disturbed. Closable by an adult.
+Implementation plan for a from-scratch Windows desktop app inspired by Scott Hanselman's [BabySmash](https://github.com/shanselman/babysmash), localized in **Bangla**:
+- Bangla numerals (`1, 2, 3` → `১, ২, ৩`) and alphabet characters.
+- Open-source Bangla fonts (**Baloo Da 2** & **Noto Sans Bengali**).
+- Open-source emoji for shapes, animals, fruits, and toys.
+- Audio engine: Low-latency toy sound effects (pops, boings, chimes, animals) + spoken Bangla pronunciations.
+- Complete toddler-proofing: Blocks Windows key, Alt+Tab, and Sticky Keys popups so child smashing never disturbs other apps or Windows settings.
+- Easily closable by adults (`Alt+F4` or holding `Escape`).
 
 ---
 
-## 1. High-level architecture
+## 1. High-Level Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                        MainWindow (WPF)                     │
-│  - Borderless, Topmost, WindowState=Maximized, no chrome     │
-│  - Covers full screen (single or all monitors)               │
-│  - Focus trap: grabs keyboard/mouse input while open         │
-└───────────────┬───────────────────────────────┬─────────────┘
-                │ KeyDown / KeyUp events         │ MouseMove/Click
-                ▼                                ▼
-      ┌───────────────────┐            ┌───────────────────┐
-      │  KeyMapService     │            │  MouseFxService    │
-      │  key -> content    │            │  cursor trail/glow │
-      └─────────┬──────────┘            └─────────┬──────────┘
-                │ SmashContent (glyph, color, emoji, sound)
-                ▼
-      ┌───────────────────────────────────────────────┐
-      │              RenderService                     │
-      │  spawns a "burst" visual on Canvas:            │
-      │   - Bangla glyph/number (Noto Sans Bengali)     │
-      │   - random open-source emoji shape (image)      │
-      │   - random color, random position/rotation      │
-      │   - scale/fade animation (Storyboard)            │
-      └─────────┬───────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                            MainWindow (WPF View)                            │
+│  - Borderless, Topmost, WindowState=Maximized                               │
+│  - Covers full screen (single or all monitors)                              │
+│  - Fullscreen Canvas for bursts, particles, typography, and emoji           │
+│  - Cursor follower (smiling face / sparkle trail)                           │
+└───────────────┬─────────────────────────────────────────────┬───────────────┘
+                │ Raw Window Events                           │ Mouse / Touch
+                ▼                                             ▼
+┌───────────────────────────────┐              ┌──────────────────────────────┐
+│  KeyboardHookService          │              │  MouseInteractionService     │
+│  - Intercepts WinKey, Alt+Tab │              │  - Cursor trailing particle  │
+│  - Disables StickyKeys / SPI  │              │  - Click/Touch spawns bursts │
+│  - Detects Adult Exit combo   │              └──────────────┬───────────────┘
+└───────────────┬───────────────┘                             │
+                │ Validated Toddler Key                       │
+                ▼                                             │
+┌───────────────────────────────┐                             │
+│  KeyMappingService            │                             │
+│  - Digits: 0-9 -> ০-৯         │                             │
+│  - Alpha: A-Z -> Bangla glyph │                             │
+│  - Special: Space/Enter bursts│                             │
+└───────────────┬───────────────┘                             │
+                │                                             │
+                ▼                                             │
+    ┌───────────────────────┐                                 │
+    │     SmashContent      │◄────────────────────────────────┘
+    │ - BanglaGlyph         │
+    │ - EmojiAssetPath      │
+    │ - PaletteColor        │
+    │ - SfxPath             │
+    │ - VoiceoverPath       │
+    └───────────┬───────────┘
                 │
-                ▼
-      ┌───────────────────┐
-      │   AudioService     │  (NAudio) plays a random sound
-      │   per key/category │  clip from Assets/Sounds
-      └───────────────────┘
+        ┌───────┴───────────────────────────┐
+        ▼                                   ▼
+┌───────────────────────────┐   ┌───────────────────────────┐
+│       RenderService       │   │       AudioService        │
+│ - Spawns animated burst   │   │ - NAudio In-Memory Mixer  │
+│ - Scale + Wobble + Fade   │   │ - Instant SFX playback    │
+│ - Particle stars/circles  │   │ - Bangla Speech Voiceover │
+│ - Max 15-item throttle    │   │ - Polyphonic concurrency  │
+└───────────────────────────┘   └───────────────────────────┘
 ```
 
-Single-process WPF app. No network calls, no telemetry. Everything (font, emoji, sounds) is
-bundled locally as app resources so it works fully offline.
+Single-process WPF app. Fully offline, no telemetry, no internet required at runtime. All fonts, emoji, and sounds are bundled locally as app resources.
 
 ---
 
-## 2. Technology stack
+## 2. Technology & Library Stack
 
-| Concern              | Choice                                   | Why |
-|-----------------------|-------------------------------------------|-----|
-| Platform/UI framework | **.NET 8 + WPF (C#)**                     | Windows-only is fine (explicitly requested), WPF gives easy fullscreen/topmost windows, XAML animations, DPI-aware rendering, and mature keyboard/mouse event model. Simpler than WinUI3/MAUI for this scope. |
-| Language              | C# 12                                     | Standard for WPF, good tooling. |
-| Audio playback        | **NAudio** (NuGet)                        | Supports overlapping/rapid sound playback (important — toddler mashes fast), WAV/MP3, low latency. `MediaPlayer`/`SoundPlayer` (built-in) can't overlap sounds well. |
-| Fonts                 | Embedded font resource (WPF `FontFamily` from `pack://` URI) | No install needed, font ships inside app folder. |
-| Images/emoji          | PNG or SVG assets bundled under `Assets/Emoji`, rendered via `Image` control (convert SVG→PNG at build time if needed, WPF has no native SVG support) |
-| Packaging             | `dotnet publish -r win-x64 --self-contained` (single-file exe) | Easiest to hand to a Windows PC, no installer required for personal use. MSIX optional later. |
-| Testing               | xUnit for `KeyMapService` mapping logic  | Pure logic, easy to unit test without UI. |
-
-No game engine (Unity/Godot) needed — this is 2D UI + sound, WPF is sufficient and much lighter.
+| Concern | Choice | Why |
+|---|---|---|
+| **Platform / UI** | **.NET 8 / 10 + WPF (C# 12)** | Windows-only desktop app. WPF provides hardware-accelerated vector/font rendering, storyboard animations, DPI awareness, and seamless fullscreen window management. |
+| **Audio Engine** | **NAudio** (`v2.2+` via NuGet) | Low-latency audio playback. Toddlers smash keys rapidly; standard `MediaPlayer` or `SoundPlayer` cannot handle polyphonic overlapping sounds without stuttering or crashing. NAudio's in-memory sample mixer handles dozens of simultaneous sounds cleanly. |
+| **Toddler-Proofing** | **Win32 Low-Level Hook (`WH_KEYBOARD_LL`)** | Necessary to intercept the Windows Key (`VK_LWIN`, `VK_RWIN`), Application key, and system task shortcuts before the OS handles them. |
+| **Accessibility Lock** | **`SystemParametersInfo` (Win32 API)** | Temporarily disables Sticky Keys (5x Shift) and Filter Keys (8s Shift hold) while the app is active, and restores them on close. |
+| **Fonts** | **Baloo Da 2** (Primary) & **Noto Sans Bengali** (Fallback) | Google Fonts (SIL Open Font License 1.1). Baloo Da 2 has rounded, friendly curves specifically designed for high legibility for young children. |
+| **Emoji / Shapes** | **Google Noto Emoji** / **Microsoft Fluent Emoji** (PNG, 512x512) | Apache 2.0 / MIT. Safe to bundle, vibrant 3D and flat styles covering animals, food, shapes, and toys. |
+| **Bangla Voiceover** | **Edge-TTS / Wikimedia Commons** | Synthesized studio-quality Bengali voice clips (`bn-BD-NabanitaNeural`) for all numerals (`০-৯`) and letters. |
+| **Packaging** | `dotnet publish -r win-x64 -p:PublishSingleFile=true --self-contained` | Produces a single, portable `.exe` file that runs on any Windows 10/11 machine without requiring .NET runtime installation. |
+| **Testing** | **xUnit** | Unit tests for key mapping, data models, and JSON configuration. |
 
 ---
 
-## 3. Project structure
+## 3. Toddler-Proofing ("Don't Disturb Other Apps or Settings")
+
+When a toddler smashes the keyboard with their hands:
+1. **Windows Key**: Slapping the bottom-left corner hits the Windows key, opening the Start menu and stealing window focus.
+2. **Sticky Keys / Filter Keys**: Tapping Shift 5 times triggers the Windows accessibility popup. Holding Shift for 8 seconds triggers Filter Keys.
+3. **Task Switching**: Smashing `Alt+Tab`, `Win+D`, `Win+M`, or `Ctrl+Esc` minimizes windows or reveals other running apps.
+
+### 3.1 Low-Level Keyboard Interception (`WH_KEYBOARD_LL`)
+A global low-level keyboard hook intercepts key events before Windows translates them:
+- **Swallowed keys**:
+  - `VK_LWIN` & `VK_RWIN` (Windows keys)
+  - `VK_APPS` (Context Menu key)
+  - `Alt + Tab`, `Alt + Esc`, `Ctrl + Esc`
+  - `Win + D`, `Win + M`, `Win + L` (where interceptable)
+- **Allowed Keys**:
+  - `Alt + F4`: Allowed through so parents can exit instantly.
+  - Normal alphanumeric keys, Space, Enter, Numpad keys are passed directly to `KeyMapService`.
+
+### 3.2 Sticky Keys & Filter Keys Bypass
+On app start, query and temporarily disable the accessibility shortcut triggers using `SystemParametersInfo`, restoring them cleanly on exit:
+```csharp
+[DllImport("user32.dll", SetLastError = true)]
+static extern bool SystemParametersInfo(uint uiAction, uint uiParam, ref STICKYKEYS pvParam, uint fWinIni);
+
+// Disable SKF_HOTKEYACTIVE during app lifetime
+```
+
+### 3.3 Safe Adult Exit Mechanisms
+1. **Primary**: `Alt + F4` (instant close).
+2. **Hold Escape for 2 Seconds**: An on-screen circular progress bar fills up ("Closing in 2... 1..."), preventing toddlers from exiting on accidental single Escape hits.
+3. **Parent Settings Corner**: A semi-transparent lock icon in the top corner that requires a double-click to exit or adjust volume.
+
+---
+
+## 4. Bangla Key-Mapping Logic
+
+### 4.1 Digits (0–9 & Numpad)
+All physical number keys map to Bengali numerals:
+
+| Key | Bangla Numeral | Pronunciation |
+|---|---|---|
+| `0` / `NumPad0` | **০** | Shunno (শূন্য) |
+| `1` / `NumPad1` | **১** | Ek (এক) |
+| `2` / `NumPad2` | **২** | Dui (দুই) |
+| `3` / `NumPad3` | **৩** | Teen (তিন) |
+| `4` / `NumPad4` | **৪** | Char (চার) |
+| `5` / `NumPad5` | **৫** | Pach (পাঁচ) |
+| `6` / `NumPad6` | **৬** | Chhoy (ছয়) |
+| `7` / `NumPad7` | **৭** | Shaat (সাত) |
+| `8` / `NumPad8` | **৮** | Aat (আট) |
+| `9` / `NumPad9` | **৯** | Noy (নয়) |
+
+### 4.2 Letters (A–Z) — Phonetic & Child-Friendly
+Physical keys `A–Z` map to prominent Bengali characters intuitively:
+
+| Key | Bangla | Word Association (Kid-Friendly) |
+|---|---|---|
+| `A` | **অ** | অজগর / আম |
+| `B` | **ব** | বই / বাঘ |
+| `C` | **চ** | চাঁদ / চশমা |
+| `D` | **দ** | দোয়েল / ডালিম |
+| `E` | **এ** | একতারা |
+| `F` | **ফ** | ফুল / ফল |
+| `G` | **গ** | গোলাপ / গাড়ি |
+| `H` | **হ** | হাতি |
+| `I` | **ই** | ইলিশ |
+| `J` | **জ** | জাহাজ / জাম |
+| `K` | **ক** | কলা / কাক |
+| `L` | **ল** | লিচু / লাল |
+| `M` | **ম** | মাছ / ময়ূর |
+| `N` | **ন** | নৌকা / নদী |
+| `O` | **ও** | ওলকপি |
+| `P` | **প** | পাখি / প্রজাপতি |
+| `Q` | **ক্ব / ৎ** | কৈতব |
+| `R` | **র** | রংধনু (Rainbow) |
+| `S` | **শ** | সিংহ / সূর্য |
+| `T` | **ট** | টিয়া / তারা |
+| `U` | **উ** | উট |
+| `V` | **ভ** | ভালুক |
+| `W` | **ঐ** | ঐরাবত |
+| `X` | **ক্ষ** | ক্ষীর |
+| `Y` | **য়** | ময়না |
+| `Z` | **ঝ** | ঝিনুক |
+
+*Configured via `Assets/keymap.json` so keys can be customized without recompiling.*
+
+### 4.3 Special Keys
+- **Spacebar**: Spawns a full-screen Celebration Firework / Confetti burst with encouraging Bangla phrases (`"দারুণ!"`, `"সাবাশ!"`, `"বাহ্!"`).
+- **Enter**: Rainbow ripple wave across the canvas.
+- **Backspace / Delete**: Playful bubble popping vacuum effect.
+- **Arrow Keys**: Bouncing animated animal running in the pressed direction.
+
+---
+
+## 5. Visuals & UI Animation Engine
+
+### 5.1 Color Palette
+Bright, high-contrast, cheerful colors:
+- Blue (`#2980B9`), Gold Yellow (`#F1C40F`), Pink (`#FF6B81`), Emerald Green (`#2ECC71`), Orange (`#FF793F`), Purple (`#9B59B6`), Crimson (`#FF4757`), Turquoise (`#00D2D3`).
+- Background: Soft dark slate (`#1E1E2E`) or warm cream, keeping colors glowing without blinding glare.
+
+### 5.2 Animated Burst Lifecycle
+1. **Spawn**: Instantiated at a random position (or mouse position) on the fullscreen `Canvas`.
+2. **Components**:
+   - Giant Bangla glyph (180pt–240pt) in `Baloo Da 2`.
+   - Curated emoji (180x180 PNG).
+   - 8–14 colorful radiating particle sparkles.
+3. **Storyboard Animation**:
+   - **0.00s – 0.15s**: Spring pop from `0.2` to `1.15` scale with slight random rotation (`-12°` to `+12°`).
+   - **0.15s – 0.30s**: Settle back to `1.0`.
+   - **0.30s – 2.00s**: Gentle floating drift (`TranslateTransform`).
+   - **2.00s – 3.00s**: Smooth opacity fade to `0.0`.
+   - **Completed**: Cleanly detached from `Canvas.Children` to avoid memory accumulation.
+4. **Throttling**: Limit maximum active on-screen items to 15. If more keys are pressed, fast-fade the oldest item.
+
+### 5.3 Mouse & Touch Tracking
+- Cursor follower: Cute smiling emoji or star tracking the mouse pointer.
+- Cursor trail: Fading colorful bubbles / sparkles left behind mouse movement.
+- Clicks or touchscreen taps spawn smash bursts directly under the finger.
+
+---
+
+## 6. Audio Architecture & Collection Pipeline
+
+### 6.1 Audio Assets Needed
+1. **Toy SFX**: 25–30 CC0 sound clips:
+   - Pops, bubbles, boings, spring bounces.
+   - Xylophone / chime notes (C, D, E, F, G, A, B).
+   - Animal sounds (cat, dog, cow, duck, sheep, bird).
+   - Baby chuckles, bells, squeaks.
+2. **Bangla Speech Audio**:
+   - Spoken Bengali digits: `"শূন্য"`, `"এক"`, `"দুই"`, `"তিন"`, `"চার"`, `"পাঁচ"`, `"ছয়"`, `"সাত"`, `"আট"`, `"নয়"`.
+   - Spoken Bengali letters: `"অ"`, `"আ"`, `"ই"`, `"ক"`, `"খ"`, etc.
+   - Reward phrases: `"দারুণ!"`, `"সাবাশ!"`, `"বাহ্!"`.
+
+### 6.2 Asset Acquisition Pipeline (Automated Scripts)
+- **`scripts/download_assets.ps1`**:
+  - Downloads **Baloo Da 2** from Google Fonts.
+  - Downloads curated **Kenney Audio** packs (CC0 - Digital Audio, Interface Sounds).
+  - Downloads curated **Google Noto Emoji** PNGs (Animals, Shapes, Toys, Fruits).
+- **`scripts/generate_bangla_audio.ps1`**:
+  - Uses `edge-tts` (voice: `bn-BD-NabanitaNeural`) to synthesize crisp, studio-grade speech for all numerals and letters directly into `Assets/Sounds/Voice/`.
+
+### 6.3 Low-Latency NAudio Playback
+- Audio files are pre-decoded into RAM (`CachedSound` float buffers).
+- Keypress feeds audio directly to `MixingSampleProvider`.
+- Multiple sounds play simultaneously without stutter, latency, or thread blocking.
+
+---
+
+## 7. Project Structure
 
 ```
 KeyBoardSmashByMahfoz/
+├─ scripts/
+│  ├─ download_assets.ps1          # Downloads fonts, CC0 sounds, and emoji icons
+│  └─ generate_bangla_audio.ps1    # Synthesizes studio-quality Bangla voice clips
 ├─ src/
 │  └─ BabySmashBN/
-│     ├─ BabySmashBN.csproj
+│     ├─ BabySmashBN.csproj        # .NET 8 WPF Project
 │     ├─ App.xaml / App.xaml.cs
-│     ├─ MainWindow.xaml / MainWindow.xaml.cs
+│     ├─ MainWindow.xaml           # Fullscreen Canvas, Topmost
+│     ├─ MainWindow.xaml.cs        # Orchestration & lifecycle
+│     ├─ Interop/
+│     │  ├─ Win32Hooks.cs          # WH_KEYBOARD_LL low-level keyboard hook
+│     │  └─ AccessibilityHelper.cs # Disables StickyKeys & FilterKeys safely
 │     ├─ Services/
-│     │  ├─ KeyMapService.cs        (key -> Bangla glyph/number, color)
-│     │  ├─ RenderService.cs        (spawns/animates shapes on canvas)
-│     │  ├─ AudioService.cs         (NAudio playback, sound pooling)
-│     │  └─ MouseFxService.cs       (optional: cursor trail/face)
+│     │  ├─ IKeyMapService.cs      # Key -> Bangla Glyph & Word contract
+│     │  ├─ KeyMapService.cs       # JSON-driven key resolver
+│     │  ├─ IAudioService.cs       # Audio playback contract
+│     │  ├─ AudioService.cs        # Low-latency NAudio mixer
+│     │  ├─ IRenderService.cs      # Canvas spawning & animations
+│     │  ├─ RenderService.cs       # Storyboards, particles, emoji loader
+│     │  └─ MouseTrailService.cs   # Cursor sparkles & follower face
 │     ├─ Models/
-│     │  └─ SmashContent.cs         (Glyph, EmojiPath, Color, SoundPath)
+│     │  ├─ SmashContent.cs        # (Glyph, Emoji, Color, Sfx, Voice)
+│     │  └─ AppConfig.cs           # Options (SoundMode, MonitorMode, ExitMode)
 │     └─ Assets/
-│        ├─ Fonts/NotoSansBengali/  (OFL-licensed font files)
-│        ├─ Emoji/                  (open-source emoji PNGs, shapes/animals)
-│        └─ Sounds/                 (collected CC0/OFL sound clips)
+│        ├─ keymap.json            # Bangla letter & number mappings
+│        ├─ Fonts/                 # Baloo Da 2 (OFL) & Noto Sans Bengali
+│        ├─ Emoji/                 # 40-50 curated 512x512 PNGs (Animals, Shapes, Toys)
+│        └─ Sounds/
+│           ├─ Sfx/                # CC0 pops, boings, xylophone, animals
+│           └─ Voice/              # Bengali speech for numerals and letters
 ├─ tests/
-│  └─ BabySmashBN.Tests/            (xUnit tests for KeyMapService)
-├─ PLAN.md                          (this file)
-└─ ASSETS_LICENSES.md               (track source + license per asset — required for CC-BY assets)
+│  └─ BabySmashBN.Tests/           # Unit tests for KeyMapService & Config
+├─ PLAN.md                         # This file
+└─ ASSETS_LICENSES.md              # Attribution & licenses (OFL, CC0, Apache 2.0)
 ```
 
 ---
 
-## 4. Bangla key-mapping logic
+## 8. Step-by-Step Implementation Milestones
 
-### 4.1 Digits (straightforward)
-Physical number keys `0–9` map directly to Bengali numerals:
+1. **M1 — Project Scaffolding & Asset Acquisition**:
+   - Initialize `.NET 8` WPF project with NAudio dependency.
+   - Run download scripts to collect fonts, CC0 sound effects, emoji, and synthesize Bangla voice files.
+   - Create `Assets/keymap.json` and `ASSETS_LICENSES.md`.
 
-| Key | Bangla |
-|-----|--------|
-| 0 | ০ |
-| 1 | ১ |
-| 2 | ২ |
-| 3 | ৩ |
-| 4 | ৪ |
-| 5 | ৫ |
-| 6 | ৬ |
-| 7 | ৭ |
-| 8 | ৮ |
-| 9 | ৯ |
+2. **M2 — Toddler-Proofing Window & Low-Level Hooks**:
+   - Implement borderless topmost fullscreen window.
+   - Implement `WH_KEYBOARD_LL` to swallow Windows Key, Alt+Tab, and application keys.
+   - Disable StickyKeys / FilterKeys via `SystemParametersInfo`.
+   - Verify `Alt + F4` closes the app and restores OS settings.
 
-### 4.2 Letters
-Physical keys `A–Z` (26 keys) map to Bangla বর্ণমালা (which has 50+ letters — vowels + consonants).
-Since it's a 1:1 static lookup (not phonetic transliteration — simplicity over correctness, this is
-for a 3-year-old, not a spelling app), pick 26 representative/common letters, e.g.:
+3. **M3 — Bangla Typography & Key Mapping**:
+   - Embed `Baloo Da 2` font.
+   - Implement `KeyMapService` translating `0–9` to `০–৯` and `A–Z` to Bengali letters.
+   - Add xUnit unit tests verifying all keys map cleanly.
 
-```
-A→অ  B→আ  C→ই  D→ঈ  E→উ  F→ঊ  G→এ  H→ঐ  I→ও  J→ঔ
-K→ক  L→খ  M→গ  N→ঘ  O→ঙ  P→চ  Q→ছ  R→জ  S→ঝ  T→ঞ
-U→ট  V→ঠ  W→ড  X→ঢ  Y→ণ  Z→ত
-```
-(Exact mapping is a config table — swap any letters later without touching code. Store as a
-simple `Dictionary<Key, string>` or a JSON file under `Assets/keymap.json` so it's easy to tweak
-without recompiling.)
+4. **M4 — Visual Burst & Particle Animation Engine**:
+   - Build `RenderService` spawning Bangla character + emoji + particle sparkles on `Canvas`.
+   - Add elastic scale, drift, and fade-out Storyboards.
+   - Implement 15-item throttle to prevent UI lag during rapid key mashing.
 
-### 4.3 Shape/emoji per keypress
-Independent of the glyph, pick a **random** open-source emoji from a curated pool (stars, animals,
-fruit, hearts, circles/squares) each keypress — this is what makes each smash visually varied, same
-as original BabySmash's random shapes.
+5. **M5 — Polyphonic Low-Latency Audio Engine**:
+   - Build `AudioService` with NAudio in-memory sample mixer.
+   - Test simultaneous rapid key mashing (play SFX + spoken Bangla pronunciation).
 
-### 4.4 Color
-Pick from a fixed palette of ~10 bright, high-contrast colors (avoid pure black/white) at random
-per keypress.
+6. **M6 — Mouse & Touch Interaction**:
+   - Add cursor-following smiling face and sparkle trail.
+   - Support mouse clicks and touchscreen taps generating bursts.
 
-### 4.5 Sound
-Pick a random short sound clip from the sound pool per keypress (pop/chime/cartoon-boop style),
-independent of key — matches original BabySmash behavior (sound = feedback that a key worked, not
-tied to which key).
-
----
-
-## 5. Fullscreen / "don't disturb other apps" behavior
-
-- `WindowStyle="None"`, `WindowState="Maximized"`, `Topmost="True"`, `ResizeMode="NoResize"`.
-- Set window bounds to cover the primary screen (or all screens if multi-monitor — use
-  `System.Windows.Forms.Screen.AllScreens` to compute bounding rect if "cover everything" is wanted).
-- Handle `PreviewKeyDown` at the Window level and mark most keys `e.Handled = true` so they don't
-  leak to the OS (prevents things like Windows spell-check popups, IME switching, etc. triggering).
-- **Leave `Alt+F4` working** (user's existing, known exit method) — don't suppress `SystemCommand`
-  close on Alt+F4. Optionally add a second adult-only exit gesture (e.g. hold `Ctrl+Shift+Esc` for
-  2 seconds) in case a toddler's mashing ever manages Alt+F4 accidentally, but this is optional
-  polish, not required for MVP.
-- **Do NOT** implement a low-level global keyboard hook (`WH_KEYBOARD_LL`) to block `Win` key /
-  `Alt+Tab` system-wide unless explicitly asked later — that's an invasive, harder-to-reverse
-  feature (affects the whole OS session, not just this app) and out of scope for MVP. Flag as a
-  stretch goal only if the toddler discovers Alt+Tab is fun.
-- Mouse: optionally also capture `MouseMove`/`MouseDown` on the fullscreen canvas for a cursor-follow
-  effect (BabySmash's bouncing smiley face) — nice-to-have, not core.
-
----
-
-## 6. Asset collection (font, emoji, sounds) — all must be open-source/permissively licensed
-
-Track every asset's source URL + license in `ASSETS_LICENSES.md` as they're added (needed for
-attribution compliance, especially with CC-BY/CC-BY-SA sources).
-
-### 6.1 Bangla font (pick one, OFL-licensed = free to bundle/redistribute)
-- **Noto Sans Bengali** — https://fonts.google.com/noto/specimen/Noto+Sans+Bengali (SIL Open Font
-  License, Google/Noto project on GitHub `notofonts/bengali`). Recommended: broad coverage, very
-  legible at large sizes, actively maintained.
-- Alternatives: **Hind Siliguri** (OFL, Indian Type Foundry), **Baloo Da 2** (OFL, playful/rounded —
-  nice for a kids' app), **Atma** (OFL, informal handwriting style).
-- Pick a large, rounded, high-contrast weight (Bold/ExtraBold) for legibility at giant fullscreen size.
-
-### 6.2 Emoji (shapes)
-- **Noto Emoji** — https://github.com/googlefonts/noto-emoji (Apache License 2.0 — no attribution
-  requirement, safe default). PNG/SVG per emoji.
-- Alternative: **OpenMoji** — https://openmoji.org (CC BY-SA 4.0 — requires attribution + share-alike
-  if redistributed; more colorful/playful style, larger variety of animal/shape emoji). If chosen,
-  attribution must be recorded in `ASSETS_LICENSES.md` and shown somewhere (e.g. an "About" dialog).
-- Curate a subset (~30–50 emoji): shapes (⭐🔵🔺⬛❤️), animals (🐶🐱🐰🦁🐘), fruit (🍎🍌🍇), etc. —
-  export as PNG at a large fixed size (e.g. 512×512) at build time so runtime rendering is cheap.
-
-### 6.3 Sounds (need to be collected/recorded)
-- **Freesound.org** — https://freesound.org — filter search by **CC0** license specifically (no
-  attribution needed) to avoid licensing overhead. Search terms: "pop", "cartoon boop", "chime",
-  "kids giggle", "bubble", "xylophone note".
-- **Kenney.nl game asset packs** — https://kenney.nl/assets?q=audio — all CC0, includes UI/pop/chime
-  sound packs designed exactly for this kind of feedback sound.
-- Alternative: record your own short (under 1s) sounds — fully avoids licensing questions.
-- Need ~15–30 short (300ms–1s) varied "positive feedback" sounds — pops, chimes, boops, giggles.
-  Normalize volume across all clips (e.g. with `ffmpeg -filter:a loudnorm`) so none is jarringly
-  louder than others.
-- Convert all to WAV (or MP3) at a consistent sample rate; keep files small (a few KB–100KB each).
-
----
-
-## 7. Data model
-
-```csharp
-public record SmashContent(
-    string BanglaGlyph,   // e.g. "১" or "ক"
-    string EmojiAssetPath,
-    Color Color,
-    string SoundAssetPath
-);
-```
-
-`KeyMapService.GetContentForKey(Key key)` returns a `SmashContent` by looking up the glyph from the
-static map, and picking random color/emoji/sound from their respective pools.
-
----
-
-## 8. Milestones (buildable increments)
-
-1. **M1 — Skeleton**: fullscreen borderless topmost WPF window, `PreviewKeyDown` shows raw key
-   text in the console/debug output. Alt+F4 closes it. Confirms input capture + fullscreen work.
-2. **M2 — Bangla text rendering**: bundle Noto Sans Bengali, render the mapped Bangla glyph/number
-   big and centered on keypress (static position first, no animation yet).
-3. **M3 — Random shape/emoji**: add emoji asset pool, render random emoji alongside the glyph at a
-   random screen position.
-4. **M4 — Animation**: add scale-in + fade-out `Storyboard` per burst so screen doesn't just fill up.
-5. **M5 — Sound**: integrate NAudio, play a random sound per keypress, verify overlapping/rapid
-   keypresses don't stutter or throw (test by literally mashing the keyboard).
-6. **M6 — Mouse effects** (optional): cursor trail or bouncing face on mouse move/click.
-7. **M7 — Polish & packaging**: color palette tuning, multi-monitor coverage decision, self-contained
-   single-file publish, `ASSETS_LICENSES.md` finalized.
-
----
-
-## 9. Open questions to confirm before/while building (flag, don't block)
-
-- Multi-monitor: cover just the primary screen, or all screens?
-- Emoji set: Noto Emoji (no attribution needed) vs OpenMoji (nicer style, attribution required)?
-- Any specific sound "personality" wanted (e.g. all cartoon boops vs mixed chimes/giggles)?
-- Adult-only secondary exit gesture — wanted or is Alt+F4 alone enough?
+7. **M7 — Verification, Polish & Single-File Packaging**:
+   - Stress test keyboard mashing.
+   - Verify zero leakage of Windows key or StickyKeys.
+   - Publish standalone single-file binary: `dotnet publish -r win-x64 -p:PublishSingleFile=true --self-contained`.
