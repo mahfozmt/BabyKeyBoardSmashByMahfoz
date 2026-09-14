@@ -1,89 +1,88 @@
-# বেবিস্ম্যাশ (BabySmash-BN)
+# বেবি কীবোর্ড স্ম্যাশ (BabyKeyBoardSmashByMahfoz)
 
-A fullscreen, toddler-proof, **Bangla-language** keyboard-smash toy for Windows — inspired by
-Scott Hanselman's [BabySmash](https://github.com/shanselman/babysmash), rebuilt from scratch so
-every number, letter, and spoken word your kid sees and hears is in Bangla.
+ছোটদের জন্য ফুলস্ক্রিন নিরাপদ **বাংলা বর্ণমালা ও সংখ্যার** মজার কীবোর্ড স্ম্যাশ গেম — Scott Hanselman-এর [BabySmash](https://github.com/shanselman/babysmash) থেকে অনুপ্রাণিত হয়ে সম্পূর্ণ নতুনভাবে তৈরি, যেখানে প্রতিটি অক্ষর, সংখ্যা, ইমোজি ও উচ্চারণ সম্পূর্ণ বাংলায় উপস্থাপিত।
 
-Let a toddler smash the keyboard: each keypress fills the screen with a giant animated Bangla
-digit or letter, a colorful open-source emoji, a sound effect, and a spoken Bangla pronunciation
-— while the app blocks the Windows key, Alt+Tab, and Sticky/Filter Keys popups so nothing outside
-the app gets disturbed. An adult can always exit with **Alt+F4**.
+ছোট বাচ্চারা যখন কীবোর্ডে বাটন চাপবে: প্রতিটি ক্লিকে স্ক্রিনে বড় আকারের অ্যানিমেটেড বাংলা বর্ণ বা সংখ্যা, মানানসই রঙিন ওপেন-সোর্স ইমোজি, মজার সাউন্ড এফেক্ট এবং মিষ্টি বাংলা ভয়েস উচ্চারণ বেজে উঠবে। অ্যাপটি ব্যাকগ্রাউন্ডে উইন্ডোজ কি (Win Key), Alt+Tab এবং Sticky/Filter Keys ব্লক করে রাখে যাতে কম্পিউটারের ফাইল বা উইন্ডো ক্ষতিগ্রস্ত না হয়। বড়দের বের হওয়ার জন্য রয়েছে **Alt+F4** অথবা **Escape (২ সেকেন্ড চেপে রাখা)**।
 
-## Features
+---
 
-- Fullscreen, borderless, always-on-top window — covers the whole screen, nothing else is reachable.
-- Digits `0–9` → Bengali numerals `০–৯`, letters `A–Z` → Bengali বর্ণমালা characters, each with a
-  kid-friendly word association.
-- Random colorful open-source emoji (animals, fruit, shapes, toys) with spring/fade animations,
-  max on-screen bursts throttled so rapid mashing never lags the UI.
-- Sound effects (pops, chimes, animal sounds) plus spoken Bangla voice pronunciations, played
-  polyphonically (rapid keypresses don't cut each other off).
-- Toddler-proofing: a low-level keyboard hook swallows the Windows key, Alt+Tab, and Ctrl+Esc, and
-  Sticky Keys / Filter Keys accessibility popups are temporarily disabled while the app runs (and
-  restored on exit).
-- Mouse/touch support: cursor-follower and click/tap bursts.
-- 100% offline. No telemetry, no network calls at runtime.
-- Fully open-source — code, fonts, emoji, and audio assets are all permissively licensed. See
-  [ASSETS_LICENSES.md](ASSETS_LICENSES.md) for exact sources/licenses of every bundled asset.
+## 🚀 সাধারণ ব্যবহারকারীদের জন্য ইনস্টলেশন (One-Click Installer)
 
-## Requirements
+প্রোগ্রামিং বা ডটনেট জ্ঞান ছাড়াই যে কেউ সহজে এটি ইনস্টল করতে পারবেন:
 
-- Windows 10 or 11
-- [.NET 8 SDK](https://dotnet.microsoft.com/download) (to build/run from source)
-- PowerShell (for the asset-collection scripts, first-time setup only)
+1. `dist/BabyKeyBoardSmash_Setup.exe` ফাইলে ডাবল ক্লিক করুন।
+2. ইনস্টলার উইন্ডোতে **"ইনস্টল করুন (Install)"** বাটনে ক্লিক করুন (কোনো অ্যাডমিনিস্ট্রেটর পারমিশন বা UAC লাগবে না)।
+3. ইনস্টলেশন শেষে স্বয়ংক্রিয়ভাবে আপনার **Desktop** ও **Start Menu**-তে শর্টকাট তৈরি হবে এবং অ্যাপটি চালু হবে।
+4. পরবর্তীতে আনইনস্টল করতে চাইলে উইন্ডোজের *Settings > Installed Apps* অথবা ফোল্ডারের `Uninstall.exe` থেকে এক ক্লিকেই মুছে ফেলা যাবে।
 
-## Getting started
+> **পোর্টেবল ভার্সন (Portable Version)**: আপনি ইনস্টল না করতে চাইলে সরাসরি `dist/app/BabyKeyBoardSmash.exe` চালু করেও ব্যবহার করতে পারেন।
+
+---
+
+## ✨ বৈশিষ্ট্যসমূহ (Features)
+
+- **ফুলস্ক্রিন ও টডলার-প্রুফ (Toddler-Proof Lock)**: ফুলস্ক্রিন মোডে চলে, উইন্ডোজের বিশেষ কি-গুলো ব্লক থাকে।
+- **বাংলা বর্ণ ও সংখ্যা (Bangla Letters & Numbers)**: `০–৯` চাপলে বাংলায় `০–৯` এবং `A–Z` বা অন্যান্য কি চাপলে স্বরবর্ণ, ব্যঞ্জনবর্ণ ও শব্দ প্রকাশ পায়।
+- **বাক্সবিহীন সুন্দর কার্ড ভিউ (Centered Dynamic Card Layout)**: বড় অক্ষরের সাথে বড় রঙিন ইমোজি ও গোল্ডেন পিল ব্যাজে বাংলা শব্দ (যেমন: **অ — অজগর**, **ব — বই**, **ক — কলম**)।
+- **শব্দ ও উচ্চারণ (Spoken Voice Pronunciation)**: অক্ষরের সাথে সংশ্লিষ্ট শব্দের পূর্ণ উচ্চারণ (যেমন: "অ — অজগর") স্পষ্ট ও মিষ্টি কণ্ঠে শোনা যায়।
+- **অন্যান্য কী চাপলে শেপ ও মজার সাউন্ড (Shapes for Special Keys)**: স্পেস, এন্টার বা অন্যান্য কি চাপলে রঙিন স্টার, হার্ট, ট্রায়াঙ্গেল ইত্যাদি শেপ এবং মজার কার্টুন সাউন্ড এফেক্ট আসে।
+- **স্মার্ট এক্সিট (Smart Safe Exit)**: ছোটদের ভুলবশত বের হয়ে যাওয়া রুখতে **Escape বাটন ২ সেকেন্ড চেপে ধরলে** অথবা বড়রা **Alt+F4** চাপলে অ্যাপ বন্ধ হয়।
+- **১০০% অফলাইন ও নিরাপদ**: কোনো ইন্টারনেট বা ট্র্যাকিং নেই।
+
+---
+
+## 🛠️ ডেভেলপার ও সোর্স কোড বিল্ড (For Developers)
+
+- **প্রয়োজনীয়তা**: Windows 10 বা 11, [.NET 8 SDK](https://dotnet.microsoft.com/download)
 
 ```powershell
-git clone <this-repo-url>
-cd KeyBoardSmashByMahfoz
+git clone https://github.com/mahfozmt/BabyKeyBoardSmashByMahfoz.git
+cd BabyKeyBoardSmashByMahfoz
 
-# First time only: download fonts/emoji and generate audio assets
-./scripts/download_assets.ps1
-./scripts/generate_audio.ps1
-
-# Build and run
+# প্রজেক্ট রান করতে:
 dotnet run --project src/BabySmashBN
+
+# সম্পূর্ণ সলিউশন বিল্ড করতে:
+dotnet build BabyKeyBoardSmashByMahfoz.slnx
+
+# টেস্ট রান করতে:
+dotnet publish tests/BabySmashBN.Tests -c Release -r win-x64 --self-contained -o tests/bin/Release
+& "tests/bin/Release/BabySmashBN.Tests.exe"
 ```
 
-To build a standalone portable `.exe` (no .NET runtime install required on the target PC):
+---
 
-```powershell
-dotnet publish src/BabySmashBN -r win-x64 -p:PublishSingleFile=true --self-contained
-```
-
-## Project structure
+## 📁 প্রজেক্ট স্ট্রাকচার (Project Structure)
 
 ```
-KeyBoardSmashByMahfoz/
+BabyKeyBoardSmashByMahfoz/
+├─ BabyKeyBoardSmashByMahfoz.slnx    # Visual Studio / .NET সলিউশন ফাইল
+├─ dist/
+│  ├─ BabyKeyBoardSmash_Setup.exe    # সাধারণ ব্যবহারকারীদের জন্য ওয়ান-ক্লিক ইনস্টলার
+│  └─ app/                           # পোর্টেবল বিল্ড (BabyKeyBoardSmash.exe + Assets/)
 ├─ src/
-│  ├─ BabySmashBN.Core/     # Key-mapping, models, Win32 interop (class library)
-│  └─ BabySmashBN/          # WPF app: window, rendering, audio, assets
+│  ├─ BabySmashBN.Core/              # কি-ম্যাপিং, মডেল ও Win32 হুকস
+│  ├─ BabySmashBN/                   # মূল WPF অ্যাপ্লিকেশন (UI, সাউন্ড ও অ্যানিমেশন)
+│  └─ BabyKeyBoardSmash.Installer/   # স্বয়ংক্রিয় ইনস্টলার ও আনইনস্টলার প্রজেক্ট
 ├─ tests/
-│  └─ BabySmashBN.Tests/    # xUnit tests
+│  └─ BabySmashBN.Tests/             # স্বয়ংক্রিয় ইউনিট টেস্ট
+├─ installer/
+│  └─ setup.iss                      # Inno Setup স্ক্রিপ্ট (CI/CD-র জন্য)
 ├─ tools/
-│  └─ AssetGenerator/       # Helper tool for generating/curating assets
-├─ scripts/                 # Asset download/generation scripts (fonts, emoji, audio)
-├─ PLAN.md                  # Full architecture & implementation plan
-├─ ASSETS_LICENSES.md       # License/attribution for every bundled font/emoji/sound
-└─ LICENSE                  # MIT license (code only — see ASSETS_LICENSES.md for assets)
+│  └─ AssetGenerator/                # অ্যাসেট ভ্যালিডেশন টুল
+├─ ASSETS_LICENSES.md                # ফন্ট, ইমোজি ও সাউন্ডের ওপেন-সোর্স লাইসেন্স
+└─ LICENSE                           # MIT License
 ```
 
-See [PLAN.md](PLAN.md) for the full architecture, library stack, and milestone breakdown.
+---
 
-## Exiting the app
+## 🛑 অ্যাপ বন্ধ করার নিয়ম (How to Exit)
 
-Press **Alt+F4** at any time — this is always passed through even while the toddler-proofing
-keyboard hook is active.
+- **Alt+F4** চাপুন, অথবা
+- **Escape** বাটনটি একটানা **২ সেকেন্ড চেপে ধরে রাখুন**।
 
-## Contributing
+---
 
-Issues and pull requests welcome — this started as a personal project (a niece who loves smashing
-keyboards) but is shared in case it's useful for other Bangla-speaking families. Keep any new
-bundled assets (fonts/emoji/sounds) permissively licensed and add them to
-`ASSETS_LICENSES.md`.
+## 📄 লাইসেন্স (License)
 
-## License
-
-Code is [MIT licensed](LICENSE). Bundled fonts, emoji, and audio each carry their own open-source
-licenses — see [ASSETS_LICENSES.md](ASSETS_LICENSES.md) before reusing assets elsewhere.
+কোড [MIT License](LICENSE)-এর আওতায় উন্মুক্ত। ব্যবহৃত ফন্ট, ইমোজি ও অডিও অ্যাসেটসমূহ ওপেন-সোর্স লাইসেন্সধারী (বিস্তারিত দেখুন [ASSETS_LICENSES.md](ASSETS_LICENSES.md))।

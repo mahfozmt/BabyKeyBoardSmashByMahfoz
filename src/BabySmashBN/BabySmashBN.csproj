@@ -3,6 +3,11 @@
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
     <TargetFramework>net8.0-windows</TargetFramework>
+    <AssemblyName>BabyKeyBoardSmash</AssemblyName>
+    <Title>বেবি কীবোর্ড স্ম্যাশ (BabyKeyBoardSmash)</Title>
+    <Product>BabyKeyBoardSmash by Mahfoz</Product>
+    <Authors>Mahfoz</Authors>
+    <Description>A fullscreen toddler-proof keyboard smash game localized in Bangla</Description>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>

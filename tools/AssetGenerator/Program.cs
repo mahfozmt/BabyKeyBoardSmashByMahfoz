@@ -39,7 +39,10 @@ class Program
     static string FindRepoRoot()
     {
         var dir = new DirectoryInfo(AppContext.BaseDirectory);
-        while (dir != null && !File.Exists(Path.Combine(dir.FullName, "KeyBoardSmashByMahfoz.slnx")) && !Directory.Exists(Path.Combine(dir.FullName, "src")))
+        while (dir != null && 
+               !File.Exists(Path.Combine(dir.FullName, "BabyKeyBoardSmashByMahfoz.slnx")) && 
+               !File.Exists(Path.Combine(dir.FullName, "KeyBoardSmashByMahfoz.slnx")) && 
+               !Directory.Exists(Path.Combine(dir.FullName, "src")))
         {
             dir = dir.Parent;
         }

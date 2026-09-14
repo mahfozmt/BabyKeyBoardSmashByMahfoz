@@ -2,6 +2,7 @@
   <Folder Name="/src/">
     <Project Path="src/BabySmashBN.Core/BabySmashBN.Core.csproj" />
     <Project Path="src/BabySmashBN/BabySmashBN.csproj" />
+    <Project Path="src/BabyKeyBoardSmash.Installer/BabyKeyBoardSmash.Installer.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/BabySmashBN.Tests/BabySmashBN.Tests.csproj" />

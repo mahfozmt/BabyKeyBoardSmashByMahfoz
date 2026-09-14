@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+    <AssemblyName>BabyKeyBoardSmash_Setup</AssemblyName>
+    <Title>BabyKeyBoardSmash Setup</Title>
+    <Product>BabyKeyBoardSmash by Mahfoz</Product>
+    <Authors>Mahfoz</Authors>
+    <Description>One-click Setup Installer for BabyKeyBoardSmash</Description>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="app_payload.zip" Condition="Exists('app_payload.zip')" />
+  </ItemGroup>
+
+</Project>
