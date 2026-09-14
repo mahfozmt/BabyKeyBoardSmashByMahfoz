@@ -22,6 +22,8 @@ public partial class MainWindow : Window
     private readonly DispatcherTimer _escTimer;
     private readonly Stopwatch _escStopwatch = new();
     private const int EscExitDurationMs = 2000;
+    private bool _isEscapeHeld;
+    private bool _isClosing;
 
     public MainWindow()
     {
@@ -35,6 +37,7 @@ public partial class MainWindow : Window
         _hook = new LowLevelKeyboardHook();
         _hook.KeyIntercepted += OnKeyIntercepted;
         _hook.EscapeStateChanged += OnEscapeStateChanged;
+        _hook.ExitRequested += OnExitRequested;
         _hook.Install();
 
         // 3. Core domain & presentation services
@@ -44,14 +47,17 @@ public partial class MainWindow : Window
         _renderService = new RenderService(SmashCanvas, _audioService);
         _mouseTrail = new MouseTrailService(SmashCanvas);
 
-        // 4. Timer for 2-second hold Escape to exit
-        _escTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(40) };
+        // 4. Timer for 2-second hold Escape to exit (smooth 25ms refresh)
+        _escTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(25) };
         _escTimer.Tick += EscTimer_Tick;
 
-        // 5. Wire up mouse and touch events
+        // 5. Wire up mouse, touch, and fallback keyboard events
         SmashCanvas.MouseMove += (s, e) => _mouseTrail.OnMouseMove(e.GetPosition(SmashCanvas));
         SmashCanvas.MouseDown += SmashCanvas_MouseDown;
         SmashCanvas.TouchDown += SmashCanvas_TouchDown;
+
+        PreviewKeyDown += MainWindow_PreviewKeyDown;
+        PreviewKeyUp += MainWindow_PreviewKeyUp;
 
         Loaded += MainWindow_Loaded;
         Closing += MainWindow_Closing;
@@ -72,6 +78,49 @@ public partial class MainWindow : Window
         WelcomeBanner.BeginAnimation(UIElement.OpacityProperty, fade);
     }
 
+    private void MainWindow_PreviewKeyDown(object sender, KeyEventArgs e)
+    {
+        // Direct WPF fallback for Alt+F4
+        if ((e.Key == Key.System && e.SystemKey == Key.F4) ||
+            (e.Key == Key.F4 && (Keyboard.Modifiers & ModifierKeys.Alt) == ModifierKeys.Alt))
+        {
+            e.Handled = true;
+            RequestExit();
+            return;
+        }
+
+        // Direct WPF fallback for Escape key
+        if (e.Key == Key.Escape)
+        {
+            e.Handled = true;
+            HandleEscapePress();
+        }
+    }
+
+    private void MainWindow_PreviewKeyUp(object sender, KeyEventArgs e)
+    {
+        if (e.Key == Key.Escape)
+        {
+            e.Handled = true;
+            HandleEscapeRelease();
+        }
+    }
+
+    private void OnExitRequested()
+    {
+        Dispatcher.InvokeAsync(RequestExit);
+    }
+
+    private void RequestExit()
+    {
+        if (_isClosing) return;
+        _isClosing = true;
+
+        _escTimer.Stop();
+        _escStopwatch.Reset();
+        Close();
+    }
+
     private void OnKeyIntercepted(int vkCode, bool isDown)
     {
         if (!isDown) return;
@@ -90,31 +139,47 @@ public partial class MainWindow : Window
         {
             if (isDown)
             {
-                _escStopwatch.Restart();
-                ExitProgressBar.Value = 0;
-                ExitOverlay.Visibility = Visibility.Visible;
-                _escTimer.Start();
+                HandleEscapePress();
             }
             else
             {
-                _escTimer.Stop();
-                _escStopwatch.Reset();
-                ExitProgressBar.Value = 0;
-                ExitOverlay.Visibility = Visibility.Collapsed;
+                HandleEscapeRelease();
             }
         });
     }
 
+    private void HandleEscapePress()
+    {
+        if (_isEscapeHeld || _isClosing) return;
+        _isEscapeHeld = true;
+
+        _escStopwatch.Restart();
+        ExitProgressBar.Value = 0;
+        ExitOverlay.Visibility = Visibility.Visible;
+        _escTimer.Start();
+    }
+
+    private void HandleEscapeRelease()
+    {
+        if (_isClosing) return;
+        _isEscapeHeld = false;
+
+        _escTimer.Stop();
+        _escStopwatch.Reset();
+        ExitProgressBar.Value = 0;
+        ExitOverlay.Visibility = Visibility.Collapsed;
+    }
+
     private void EscTimer_Tick(object? sender, EventArgs e)
     {
+        if (_isClosing) return;
+
         long elapsed = _escStopwatch.ElapsedMilliseconds;
         ExitProgressBar.Value = Math.Min(elapsed, EscExitDurationMs);
 
         if (elapsed >= EscExitDurationMs)
         {
-            _escTimer.Stop();
-            _escStopwatch.Reset();
-            Close();
+            RequestExit();
         }
     }
 
@@ -167,7 +232,7 @@ public partial class MainWindow : Window
 
     private void BtnExit_Click(object sender, RoutedEventArgs e)
     {
-        Close();
+        RequestExit();
     }
 
     private void MainWindow_Closing(object? sender, System.ComponentModel.CancelEventArgs e)
@@ -176,5 +241,6 @@ public partial class MainWindow : Window
         _hook.Dispose();
         _accessibilityHelper.Dispose();
         _audioService.Dispose();
+        Application.Current.Shutdown();
     }
 }

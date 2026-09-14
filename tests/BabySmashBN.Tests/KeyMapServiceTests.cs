@@ -13,8 +13,19 @@ public class KeyMapServiceTests
     public KeyMapServiceTests()
     {
         // Use the assets directory from the main project
-        string assetsDir = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "../../../../../src/BabySmashBN/Assets"));
+        string repoRoot = FindRepoRoot();
+        string assetsDir = Path.Combine(repoRoot, "src", "BabySmashBN", "Assets");
         _service = new KeyMapService(assetsDir);
+    }
+
+    private static string FindRepoRoot()
+    {
+        var dir = new DirectoryInfo(AppContext.BaseDirectory);
+        while (dir != null && !File.Exists(Path.Combine(dir.FullName, "KeyBoardSmashByMahfoz.slnx")) && !Directory.Exists(Path.Combine(dir.FullName, "src")))
+        {
+            dir = dir.Parent;
+        }
+        return dir?.FullName ?? AppContext.BaseDirectory;
     }
 
     [Theory]

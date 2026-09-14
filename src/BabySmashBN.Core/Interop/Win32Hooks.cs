@@ -15,6 +15,7 @@ public sealed class LowLevelKeyboardHook : IDisposable
     private const int VK_TAB = 0x09;
     private const int VK_ESCAPE = 0x1B;
     private const int VK_SPACE = 0x20;
+    private const int VK_MENU = 0x12; // Alt key
     private const int VK_LWIN = 0x5B;
     private const int VK_RWIN = 0x5C;
     private const int VK_APPS = 0x5D;
@@ -54,10 +55,12 @@ public sealed class LowLevelKeyboardHook : IDisposable
 
     private readonly LowLevelKeyboardProc _proc;
     private IntPtr _hookId = IntPtr.Zero;
+    private bool _isEscapeDown;
     private bool _disposed;
 
     public event Action<int, bool>? KeyIntercepted; // (vkCode, isDown)
     public event Action<bool>? EscapeStateChanged; // isDown
+    public event Action? ExitRequested; // Triggered when Alt+F4 is pressed
 
     public LowLevelKeyboardHook()
     {
@@ -68,9 +71,26 @@ public sealed class LowLevelKeyboardHook : IDisposable
     {
         if (_hookId != IntPtr.Zero) return;
 
-        using var curProcess = Process.GetCurrentProcess();
-        using var curModule = curProcess.MainModule;
-        _hookId = SetWindowsHookEx(WH_KEYBOARD_LL, _proc, GetModuleHandle(curModule?.ModuleName), 0);
+        try
+        {
+            using var curProcess = Process.GetCurrentProcess();
+            using var curModule = curProcess.MainModule;
+            IntPtr hMod = GetModuleHandle(curModule?.ModuleName);
+            if (hMod == IntPtr.Zero)
+            {
+                hMod = GetModuleHandle(null);
+            }
+
+            _hookId = SetWindowsHookEx(WH_KEYBOARD_LL, _proc, hMod, 0);
+            if (_hookId == IntPtr.Zero)
+            {
+                _hookId = SetWindowsHookEx(WH_KEYBOARD_LL, _proc, IntPtr.Zero, 0);
+            }
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"Failed to install keyboard hook: {ex.Message}");
+        }
     }
 
     public void Uninstall()
@@ -92,23 +112,41 @@ public sealed class LowLevelKeyboardHook : IDisposable
 
             var kb = Marshal.PtrToStructure<KBDLLHOOKSTRUCT>(lParam);
             var vkCode = (int)kb.vkCode;
-            var altDown = (kb.flags & LLKHF_ALTDOWN) != 0;
+            var altDown = (kb.flags & LLKHF_ALTDOWN) != 0 ||
+                          (GetAsyncKeyState(VK_MENU) & 0x8000) != 0 ||
+                          msg == WM_SYSKEYDOWN || msg == WM_SYSKEYUP;
 
-            // 1. Allow Alt + F4 to pass through for adult exit
-            if (altDown && vkCode == VK_F4)
+            // 1. Alt + F4 for adult exit: trigger ExitRequested immediately and pass to system
+            if (vkCode == VK_F4 && altDown)
             {
+                if (isDown)
+                {
+                    ExitRequested?.Invoke();
+                }
                 return CallNextHookEx(_hookId, nCode, wParam, lParam);
             }
 
             // 2. Track Escape key press/release for hold-to-exit
+            // Note: Filter out Windows auto-repeat WM_KEYDOWN messages so the timer isn't restarted!
             if (vkCode == VK_ESCAPE)
             {
-                if (isDown) EscapeStateChanged?.Invoke(true);
-                else if (isUp) EscapeStateChanged?.Invoke(false);
+                if (isDown)
+                {
+                    if (!_isEscapeDown)
+                    {
+                        _isEscapeDown = true;
+                        EscapeStateChanged?.Invoke(true);
+                    }
+                }
+                else if (isUp)
+                {
+                    _isEscapeDown = false;
+                    EscapeStateChanged?.Invoke(false);
+                }
                 return (IntPtr)1; // Swallow Escape from OS
             }
 
-            // 3. Swallow Windows keys, Context Menu key, and Ctrl+Esc
+            // 3. Swallow Windows keys, Context Menu key
             if (vkCode == VK_LWIN || vkCode == VK_RWIN || vkCode == VK_APPS)
             {
                 return (IntPtr)1;
@@ -149,6 +187,7 @@ public sealed class LowLevelKeyboardHook : IDisposable
         if (!_disposed)
         {
             Uninstall();
+            _isEscapeDown = false;
             _disposed = true;
         }
     }

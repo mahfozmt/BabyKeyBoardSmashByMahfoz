@@ -123,6 +123,7 @@
         <!-- Escape Hold-to-Exit Visual Ring / Banner Overlay -->
         <Border x:Name="ExitOverlay"
                 Visibility="Collapsed"
+                Panel.ZIndex="99999"
                 HorizontalAlignment="Center"
                 VerticalAlignment="Center"
                 Background="#EE11111B"
