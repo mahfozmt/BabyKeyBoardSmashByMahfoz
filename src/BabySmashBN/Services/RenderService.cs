@@ -50,23 +50,36 @@ public class RenderService : IRenderService
         }
     }
 
+    private const double BurstWidth = 420;
+    private const double BurstHeight = 460;
+    private const double HalfBurstW = BurstWidth / 2.0; // 210
+    private const double HalfBurstH = BurstHeight / 2.0; // 230
+
     public void SpawnBurst(SmashContent content, Point? targetPoint = null)
     {
-        double screenW = _canvas.ActualWidth > 200 ? _canvas.ActualWidth : 1200;
-        double screenH = _canvas.ActualHeight > 200 ? _canvas.ActualHeight : 800;
+        double screenW = _canvas.ActualWidth > 300 ? _canvas.ActualWidth : 1280;
+        double screenH = _canvas.ActualHeight > 300 ? _canvas.ActualHeight : 800;
 
-        // Determine center point for this burst
-        double cx = targetPoint?.X ?? (_random.NextDouble() * (screenW - 380) + 190);
-        double cy = targetPoint?.Y ?? (_random.NextDouble() * (screenH - 380) + 190);
+        // Keep burst safely inside canvas visible boundaries
+        double minX = HalfBurstW + 20;
+        double maxX = Math.Max(minX, screenW - HalfBurstW - 20);
+        double minY = HalfBurstH + 20;
+        double maxY = Math.Max(minY, screenH - HalfBurstH - 20);
+
+        double cx = targetPoint?.X ?? (_random.NextDouble() * (maxX - minX) + minX);
+        double cy = targetPoint?.Y ?? (_random.NextDouble() * (maxY - minY) + minY);
+
+        cx = Math.Clamp(cx, minX, maxX);
+        cy = Math.Clamp(cy, minY, maxY);
 
         var container = new Grid
         {
-            Width = 320,
-            Height = 320,
+            Width = BurstWidth,
+            Height = BurstHeight,
             HorizontalAlignment = HorizontalAlignment.Center,
             VerticalAlignment = VerticalAlignment.Center,
             Cursor = Cursors.Hand,
-            Background = Brushes.Transparent // Enables clicking anywhere inside 320x320 area
+            Background = Brushes.Transparent // Enables clicking anywhere inside burst area
         };
 
         Canvas.SetZIndex(container, ++_zIndexCounter);
@@ -89,9 +102,27 @@ public class RenderService : IRenderService
             var shapeVisual = CreateShapeVisual(content.ShapeType ?? "Star", content.Color);
             contentStack.Children.Add(shapeVisual);
 
-            // Shape Bangla name (e.g. "তারা", "হৃদয়", "বৃত্ত", "ত্রিভুজ")
+            // Shape Bangla name pill badge (e.g. "তারা", "হৃদয়", "বৃত্ত", "ত্রিভুজ")
             if (!string.IsNullOrEmpty(content.SecondaryText))
             {
+                var shapeBadge = new Border
+                {
+                    Background = new SolidColorBrush(Color.FromArgb(150, 17, 17, 27)),
+                    BorderBrush = new SolidColorBrush(Color.FromArgb(100, 255, 255, 255)),
+                    BorderThickness = new Thickness(1.5),
+                    CornerRadius = new CornerRadius(18),
+                    Padding = new Thickness(20, 6, 20, 7),
+                    Margin = new Thickness(0, 14, 0, 0),
+                    HorizontalAlignment = HorizontalAlignment.Center,
+                    Effect = new DropShadowEffect
+                    {
+                        Color = Colors.Black,
+                        BlurRadius = 14,
+                        ShadowDepth = 3,
+                        Opacity = 0.6
+                    }
+                };
+
                 var shapeLabel = new TextBlock
                 {
                     Text = content.SecondaryText,
@@ -100,102 +131,108 @@ public class RenderService : IRenderService
                     FontWeight = FontWeights.Bold,
                     Foreground = Brushes.White,
                     HorizontalAlignment = HorizontalAlignment.Center,
-                    TextAlignment = TextAlignment.Center,
-                    Margin = new Thickness(0, 10, 0, 0),
-                    Effect = new DropShadowEffect
-                    {
-                        Color = Colors.Black,
-                        BlurRadius = 12,
-                        ShadowDepth = 3,
-                        Opacity = 0.7
-                    }
+                    TextAlignment = TextAlignment.Center
                 };
-                contentStack.Children.Add(shapeLabel);
+                shapeBadge.Child = shapeLabel;
+                contentStack.Children.Add(shapeBadge);
             }
         }
         else
         {
             // --- LETTER / NUMBER VISUAL ---
-            // Emoji Image (Animals, fruits, toys)
+            // 1. Emoji Image (Animals, fruits, toys matching word)
             if (!string.IsNullOrEmpty(content.EmojiPath) && File.Exists(content.EmojiPath))
             {
                 var bitmap = LoadCachedImage(content.EmojiPath);
                 var img = new Image
                 {
                     Source = bitmap,
-                    Width = 120,
-                    Height = 120,
+                    Width = 105,
+                    Height = 105,
                     HorizontalAlignment = HorizontalAlignment.Center,
-                    Margin = new Thickness(0, 0, 0, 6),
+                    Margin = new Thickness(0, 0, 0, 2),
                     Effect = new DropShadowEffect
                     {
                         Color = Colors.Black,
-                        BlurRadius = 16,
-                        ShadowDepth = 4,
+                        BlurRadius = 14,
+                        ShadowDepth = 3,
                         Opacity = 0.45
                     }
                 };
+                RenderOptions.SetBitmapScalingMode(img, BitmapScalingMode.HighQuality);
                 contentStack.Children.Add(img);
             }
 
-            // Big Bangla Glyph (১, ২, ৩, অ, ব, ক...)
+            // 2. Big Bangla Glyph (১, ২, ৩, অ, ব, ক...)
             if (!string.IsNullOrEmpty(content.Glyph))
             {
                 var glyphText = new TextBlock
                 {
                     Text = content.Glyph,
                     FontFamily = _banglaFont,
-                    FontSize = content.Glyph.Length > 2 ? 64 : 115,
+                    FontSize = content.Glyph.Length > 2 ? 60 : 92,
                     FontWeight = FontWeights.Bold,
                     Foreground = new SolidColorBrush(content.Color),
                     HorizontalAlignment = HorizontalAlignment.Center,
                     TextAlignment = TextAlignment.Center,
+                    Margin = new Thickness(0, -4, 0, 2),
                     Effect = new DropShadowEffect
                     {
                         Color = Colors.Black,
-                        BlurRadius = 14,
+                        BlurRadius = 16,
                         ShadowDepth = 4,
-                        Opacity = 0.6
+                        Opacity = 0.65
                     }
                 };
                 contentStack.Children.Add(glyphText);
             }
 
-            // Secondary Word Text (e.g. "এক", "কলা", "বই")
+            // 3. Secondary Word Text badge (e.g. "অজগর", "কলা", "বই")
             if (!string.IsNullOrEmpty(content.SecondaryText))
             {
+                var wordBadge = new Border
+                {
+                    Background = new SolidColorBrush(Color.FromArgb(160, 17, 17, 27)),
+                    BorderBrush = new SolidColorBrush(Color.FromArgb(120, 255, 255, 255)),
+                    BorderThickness = new Thickness(1.5),
+                    CornerRadius = new CornerRadius(16),
+                    Padding = new Thickness(18, 5, 18, 6),
+                    HorizontalAlignment = HorizontalAlignment.Center,
+                    Margin = new Thickness(0, 4, 0, 0),
+                    Effect = new DropShadowEffect
+                    {
+                        Color = Colors.Black,
+                        BlurRadius = 12,
+                        ShadowDepth = 3,
+                        Opacity = 0.6
+                    }
+                };
+
                 var secondaryText = new TextBlock
                 {
                     Text = content.SecondaryText,
                     FontFamily = _banglaFont,
                     FontSize = 26,
-                    FontWeight = FontWeights.SemiBold,
-                    Foreground = Brushes.White,
+                    FontWeight = FontWeights.Bold,
+                    Foreground = new SolidColorBrush(Color.FromRgb(249, 226, 175)), // Warm Golden Yellow
                     HorizontalAlignment = HorizontalAlignment.Center,
-                    TextAlignment = TextAlignment.Center,
-                    Margin = new Thickness(0, 4, 0, 0),
-                    Effect = new DropShadowEffect
-                    {
-                        Color = Colors.Black,
-                        BlurRadius = 10,
-                        ShadowDepth = 2,
-                        Opacity = 0.6
-                    }
+                    TextAlignment = TextAlignment.Center
                 };
-                contentStack.Children.Add(secondaryText);
+                wordBadge.Child = secondaryText;
+                contentStack.Children.Add(wordBadge);
             }
         }
 
         container.Children.Add(contentStack);
 
         // Positioning on Canvas
-        Canvas.SetLeft(container, cx - 160);
-        Canvas.SetTop(container, cy - 160);
+        Canvas.SetLeft(container, cx - HalfBurstW);
+        Canvas.SetTop(container, cy - HalfBurstH);
 
         // Transforms for elastic popping and gentle drifting
         var transformGroup = new TransformGroup();
-        var scaleTransform = new ScaleTransform(0.2, 0.2, 160, 160);
-        var rotateTransform = new RotateTransform(_random.Next(-14, 15), 160, 160);
+        var scaleTransform = new ScaleTransform(0.2, 0.2, HalfBurstW, HalfBurstH);
+        var rotateTransform = new RotateTransform(_random.Next(-10, 11), HalfBurstW, HalfBurstH);
         var translateTransform = new TranslateTransform(0, 0);
 
         transformGroup.Children.Add(scaleTransform);

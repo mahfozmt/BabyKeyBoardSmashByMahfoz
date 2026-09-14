@@ -13,22 +13,27 @@ class Program
 {
     static async Task Main(string[] args)
     {
-        string baseDir = Path.Combine(FindRepoRoot(), "src", "BabySmashBN", "Assets", "Sounds");
-        string sfxDir = Path.Combine(baseDir, "Sfx");
-        string voiceDir = Path.Combine(baseDir, "Voice");
+        string assetsRoot = Path.Combine(FindRepoRoot(), "src", "BabySmashBN", "Assets");
+        string sfxDir = Path.Combine(assetsRoot, "Sounds", "Sfx");
+        string voiceDir = Path.Combine(assetsRoot, "Sounds", "Voice");
+        string emojiDir = Path.Combine(assetsRoot, "Emoji");
 
         Directory.CreateDirectory(sfxDir);
         Directory.CreateDirectory(voiceDir);
+        Directory.CreateDirectory(emojiDir);
 
-        Console.WriteLine("1. Synthesizing High-Quality Procedural SFX WAVs...");
+        Console.WriteLine("1. Downloading Missing Google Noto Emojis...");
+        await DownloadMissingEmojis(emojiDir);
+
+        Console.WriteLine("2. Synthesizing High-Quality Procedural SFX WAVs...");
         GenerateProceduralSfx(sfxDir);
 
-        Console.WriteLine("2. Downloading Native Bangla Voice Clips...");
+        Console.WriteLine("3. Downloading Native Bangla Voice Clips (Letter + Word combo)...");
         await DownloadBanglaVoiceClips(voiceDir);
 
-        Console.WriteLine("All audio assets are ready!");
+        Console.WriteLine("All assets are ready!");
 
-        TestAudioPlayback(baseDir);
+        TestAudioPlayback(Path.Combine(assetsRoot, "Sounds"));
     }
 
     static string FindRepoRoot()
@@ -349,6 +354,46 @@ class Program
         Console.WriteLine($"  Created: {Path.GetFileName(path)}");
     }
 
+    static async Task DownloadMissingEmojis(string emojiDir)
+    {
+        var emojis = new Dictionary<string, string>
+        {
+            { "snake.png", "emoji_u1f40d.png" },
+            { "book.png", "emoji_u1f4d6.png" },
+            { "moon.png", "emoji_u1f319.png" },
+            { "bird.png", "emoji_u1f426.png" },
+            { "ship.png", "emoji_u1f6a2.png" },
+            { "boat.png", "emoji_u26f5.png" },
+            { "camel.png", "emoji_u1f42b.png" },
+            { "shell.png", "emoji_u1f41a.png" },
+            { "carrot.png", "emoji_u1f955.png" }
+        };
+
+        using var client = new HttpClient();
+        client.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64)");
+
+        foreach (var (filename, codepointFile) in emojis)
+        {
+            string dest = Path.Combine(emojiDir, filename);
+            if (File.Exists(dest) && new FileInfo(dest).Length > 500) continue;
+
+            string url = $"https://raw.githubusercontent.com/googlefonts/noto-emoji/main/png/128/{codepointFile}";
+            try
+            {
+                byte[] bytes = await client.GetByteArrayAsync(url);
+                if (bytes.Length > 200)
+                {
+                    await File.WriteAllBytesAsync(dest, bytes);
+                    Console.WriteLine($"  Emoji: {filename} ({bytes.Length} bytes)");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"  Failed downloading emoji {filename}: {ex.Message}");
+            }
+        }
+    }
+
     static async Task DownloadBanglaVoiceClips(string voiceDir)
     {
         var voiceItems = new Dictionary<string, string>
@@ -365,33 +410,33 @@ class Program
             { "num_8.mp3", "আট" },
             { "num_9.mp3", "নয়" },
 
-            // Letters A-Z
-            { "let_a.mp3", "অ" },
-            { "let_b.mp3", "ব" },
-            { "let_c.mp3", "চ" },
-            { "let_d.mp3", "দ" },
-            { "let_e.mp3", "এ" },
-            { "let_f.mp3", "ফ" },
-            { "let_g.mp3", "গ" },
-            { "let_h.mp3", "হ" },
-            { "let_i.mp3", "ই" },
-            { "let_j.mp3", "জ" },
-            { "let_k.mp3", "ক" },
-            { "let_l.mp3", "ল" },
-            { "let_m.mp3", "ম" },
-            { "let_n.mp3", "ন" },
-            { "let_o.mp3", "ও" },
-            { "let_p.mp3", "প" },
-            { "let_q.mp3", "ৎ" },
-            { "let_r.mp3", "র" },
-            { "let_s.mp3", "শ" },
-            { "let_t.mp3", "ট" },
-            { "let_u.mp3", "উ" },
-            { "let_v.mp3", "ভ" },
-            { "let_w.mp3", "ঐ" },
-            { "let_x.mp3", "ক্ষ" },
-            { "let_y.mp3", "য়" },
-            { "let_z.mp3", "ঝ" },
+            // Letters A-Z (Letter + Associated Word combo)
+            { "let_a.mp3", "অ, অজগর" },
+            { "let_b.mp3", "ব, বই" },
+            { "let_c.mp3", "চ, চাঁদ" },
+            { "let_d.mp3", "দ, দোয়েল" },
+            { "let_e.mp3", "এ, একতারা" },
+            { "let_f.mp3", "ফ, ফুল" },
+            { "let_g.mp3", "গ, গোলাপ" },
+            { "let_h.mp3", "হ, হাতি" },
+            { "let_i.mp3", "ই, ইলিশ" },
+            { "let_j.mp3", "জ, জাহাজ" },
+            { "let_k.mp3", "ক, কলা" },
+            { "let_l.mp3", "ল, লিচু" },
+            { "let_m.mp3", "ম, মাছ" },
+            { "let_n.mp3", "ন, নৌকা" },
+            { "let_o.mp3", "ও, ওলকপি" },
+            { "let_p.mp3", "প, পাখি" },
+            { "let_q.mp3", "ৎ, কৈতব" },
+            { "let_r.mp3", "র, রংধনু" },
+            { "let_s.mp3", "শ, সিংহ" },
+            { "let_t.mp3", "ট, টিয়া" },
+            { "let_u.mp3", "উ, উট" },
+            { "let_v.mp3", "ভ, ভালুক" },
+            { "let_w.mp3", "ঐ, ঐরাবত" },
+            { "let_x.mp3", "ক্ষ, ক্ষীর" },
+            { "let_y.mp3", "য়, ময়না" },
+            { "let_z.mp3", "ঝ, ঝিনুক" },
 
             // Celebratory clips
             { "cheer_1.mp3", "দারুণ" },
@@ -405,7 +450,8 @@ class Program
         foreach (var kvp in voiceItems)
         {
             string dest = Path.Combine(voiceDir, kvp.Key);
-            if (File.Exists(dest) && new FileInfo(dest).Length > 500)
+            // Re-download let_* files to get the full letter+word pronunciation
+            if (File.Exists(dest) && !kvp.Key.StartsWith("let_") && new FileInfo(dest).Length > 500)
             {
                 continue;
             }

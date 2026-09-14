@@ -17,8 +17,8 @@ public class KeyMapService : IKeyMapService
     private readonly List<string> _sfxFiles = new();
     private readonly List<string> _funnySfxFiles = new();
 
-    private readonly Dictionary<string, (string Glyph, string? Word, string? Voice)> _digitMap = new();
-    private readonly Dictionary<string, (string Glyph, string? Word, string? Voice)> _letterMap = new();
+    private readonly Dictionary<string, (string Glyph, string? Word, string? Voice, string? Emoji)> _digitMap = new();
+    private readonly Dictionary<string, (string Glyph, string? Word, string? Voice, string? Emoji)> _letterMap = new();
 
     private static readonly (string Type, string NameBn)[] SupportedShapes = new[]
     {
@@ -72,60 +72,60 @@ public class KeyMapService : IKeyMapService
     private void LoadKeymapJson()
     {
         // 1. Hardcoded default mappings (ensure reliability)
-        var defaultDigits = new Dictionary<string, (string, string?, string?)>
+        var defaultDigits = new Dictionary<string, (string, string?, string?, string?)>
         {
-            { "D0", ("০", "শূন্য", "num_0.mp3") },
-            { "D1", ("১", "এক", "num_1.mp3") },
-            { "D2", ("২", "দুই", "num_2.mp3") },
-            { "D3", ("৩", "তিন", "num_3.mp3") },
-            { "D4", ("৪", "চার", "num_4.mp3") },
-            { "D5", ("৫", "পাঁচ", "num_5.mp3") },
-            { "D6", ("৬", "ছয়", "num_6.mp3") },
-            { "D7", ("৭", "সাত", "num_7.mp3") },
-            { "D8", ("৮", "আট", "num_8.mp3") },
-            { "D9", ("৯", "নয়", "num_9.mp3") },
-            { "NumPad0", ("০", "শূন্য", "num_0.mp3") },
-            { "NumPad1", ("১", "এক", "num_1.mp3") },
-            { "NumPad2", ("২", "দুই", "num_2.mp3") },
-            { "NumPad3", ("৩", "তিন", "num_3.mp3") },
-            { "NumPad4", ("৪", "চার", "num_4.mp3") },
-            { "NumPad5", ("৫", "পাঁচ", "num_5.mp3") },
-            { "NumPad6", ("৬", "ছয়", "num_6.mp3") },
-            { "NumPad7", ("৭", "সাত", "num_7.mp3") },
-            { "NumPad8", ("৮", "আট", "num_8.mp3") },
-            { "NumPad9", ("৯", "নয়", "num_9.mp3") }
+            { "D0", ("০", "শূন্য", "num_0.mp3", "sparkles.png") },
+            { "D1", ("১", "এক", "num_1.mp3", "apple.png") },
+            { "D2", ("২", "দুই", "num_2.mp3", "star.png") },
+            { "D3", ("৩", "তিন", "num_3.mp3", "balloon.png") },
+            { "D4", ("৪", "চার", "num_4.mp3", "strawberry.png") },
+            { "D5", ("৫", "পাঁচ", "num_5.mp3", "crown.png") },
+            { "D6", ("৬", "ছয়", "num_6.mp3", "soccer.png") },
+            { "D7", ("৭", "সাত", "num_7.mp3", "rainbow.png") },
+            { "D8", ("৮", "আট", "num_8.mp3", "bear.png") },
+            { "D9", ("৯", "নয়", "num_9.mp3", "rocket.png") },
+            { "NumPad0", ("০", "শূন্য", "num_0.mp3", "sparkles.png") },
+            { "NumPad1", ("১", "এক", "num_1.mp3", "apple.png") },
+            { "NumPad2", ("২", "দুই", "num_2.mp3", "star.png") },
+            { "NumPad3", ("৩", "তিন", "num_3.mp3", "balloon.png") },
+            { "NumPad4", ("৪", "চার", "num_4.mp3", "strawberry.png") },
+            { "NumPad5", ("৫", "পাঁচ", "num_5.mp3", "crown.png") },
+            { "NumPad6", ("৬", "ছয়", "num_6.mp3", "soccer.png") },
+            { "NumPad7", ("৭", "সাত", "num_7.mp3", "rainbow.png") },
+            { "NumPad8", ("৮", "আট", "num_8.mp3", "bear.png") },
+            { "NumPad9", ("৯", "নয়", "num_9.mp3", "rocket.png") }
         };
 
         foreach (var kvp in defaultDigits) _digitMap[kvp.Key] = kvp.Value;
 
-        var defaultLetters = new Dictionary<string, (string, string?, string?)>
+        var defaultLetters = new Dictionary<string, (string, string?, string?, string?)>
         {
-            { "A", ("অ", "অজগর", "let_a.mp3") },
-            { "B", ("ব", "বই", "let_b.mp3") },
-            { "C", ("চ", "চাঁদ", "let_c.mp3") },
-            { "D", ("দ", "দোয়েল", "let_d.mp3") },
-            { "E", ("এ", "একতারা", "let_e.mp3") },
-            { "F", ("ফ", "ফুল", "let_f.mp3") },
-            { "G", ("গ", "গোলাপ", "let_g.mp3") },
-            { "H", ("হ", "হাতি", "let_h.mp3") },
-            { "I", ("ই", "ইলিশ", "let_i.mp3") },
-            { "J", ("জ", "জাহাজ", "let_j.mp3") },
-            { "K", ("ক", "কলা", "let_k.mp3") },
-            { "L", ("ল", "লিচু", "let_l.mp3") },
-            { "M", ("ম", "মাছ", "let_m.mp3") },
-            { "N", ("ন", "নৌকা", "let_n.mp3") },
-            { "O", ("ও", "ওলকপি", "let_o.mp3") },
-            { "P", ("প", "পাখি", "let_p.mp3") },
-            { "Q", ("ৎ", "কৈতব", "let_q.mp3") },
-            { "R", ("র", "রংধনু", "let_r.mp3") },
-            { "S", ("শ", "সিংহ", "let_s.mp3") },
-            { "T", ("ট", "টিয়া", "let_t.mp3") },
-            { "U", ("উ", "উট", "let_u.mp3") },
-            { "V", ("ভ", "ভালুক", "let_v.mp3") },
-            { "W", ("ঐ", "ঐরাবত", "let_w.mp3") },
-            { "X", ("ক্ষ", "ক্ষীর", "let_x.mp3") },
-            { "Y", ("য়", "ময়না", "let_y.mp3") },
-            { "Z", ("ঝ", "ঝিনুক", "let_z.mp3") }
+            { "A", ("অ", "অজগর", "let_a.mp3", "snake.png") },
+            { "B", ("ব", "বই", "let_b.mp3", "book.png") },
+            { "C", ("চ", "চাঁদ", "let_c.mp3", "moon.png") },
+            { "D", ("দ", "দোয়েল", "let_d.mp3", "bird.png") },
+            { "E", ("এ", "একতারা", "let_e.mp3", "guitar.png") },
+            { "F", ("ফ", "ফুল", "let_f.mp3", "flower.png") },
+            { "G", ("গ", "গোলাপ", "let_g.mp3", "flower.png") },
+            { "H", ("হ", "হাতি", "let_h.mp3", "elephant.png") },
+            { "I", ("ই", "ইলিশ", "let_i.mp3", "fish.png") },
+            { "J", ("জ", "জাহাজ", "let_j.mp3", "ship.png") },
+            { "K", ("ক", "কলা", "let_k.mp3", "banana.png") },
+            { "L", ("ল", "লিচু", "let_l.mp3", "strawberry.png") },
+            { "M", ("ম", "মাছ", "let_m.mp3", "fish.png") },
+            { "N", ("ন", "নৌকা", "let_n.mp3", "boat.png") },
+            { "O", ("ও", "ওলকপি", "let_o.mp3", "carrot.png") },
+            { "P", ("প", "পাখি", "let_p.mp3", "bird.png") },
+            { "Q", ("ৎ", "কৈতব", "let_q.mp3", "glowing_star.png") },
+            { "R", ("র", "রংধনু", "let_r.mp3", "rainbow.png") },
+            { "S", ("শ", "সিংহ", "let_s.mp3", "lion.png") },
+            { "T", ("ট", "টিয়া", "let_t.mp3", "bird.png") },
+            { "U", ("উ", "উট", "let_u.mp3", "camel.png") },
+            { "V", ("ভ", "ভালুক", "let_v.mp3", "bear.png") },
+            { "W", ("ঐ", "ঐরাবত", "let_w.mp3", "elephant.png") },
+            { "X", ("ক্ষ", "ক্ষীর", "let_x.mp3", "icecream.png") },
+            { "Y", ("য়", "ময়না", "let_y.mp3", "bird.png") },
+            { "Z", ("ঝ", "ঝিনুক", "let_z.mp3", "shell.png") }
         };
 
         foreach (var kvp in defaultLetters) _letterMap[kvp.Key] = kvp.Value;
@@ -146,7 +146,8 @@ public class KeyMapService : IKeyMapService
                         string glyph = prop.Value.GetProperty("glyph").GetString() ?? "";
                         string? name = prop.Value.TryGetProperty("name", out var n) ? n.GetString() : null;
                         string? voice = prop.Value.TryGetProperty("voice", out var v) ? v.GetString() : null;
-                        _digitMap[prop.Name] = (glyph, name, voice);
+                        string? emoji = prop.Value.TryGetProperty("emoji", out var em) ? em.GetString() : null;
+                        _digitMap[prop.Name] = (glyph, name, voice, emoji);
                     }
                 }
 
@@ -157,7 +158,8 @@ public class KeyMapService : IKeyMapService
                         string glyph = prop.Value.GetProperty("glyph").GetString() ?? "";
                         string? word = prop.Value.TryGetProperty("word", out var w) ? w.GetString() : null;
                         string? voice = prop.Value.TryGetProperty("voice", out var v) ? v.GetString() : null;
-                        _letterMap[prop.Name] = (glyph, word, voice);
+                        string? emoji = prop.Value.TryGetProperty("emoji", out var em) ? em.GetString() : null;
+                        _letterMap[prop.Name] = (glyph, word, voice, emoji);
                     }
                 }
             }
@@ -283,15 +285,17 @@ public class KeyMapService : IKeyMapService
     {
         if (!_digitMap.TryGetValue(key, out var val))
         {
-            val = ("১", "এক", "num_1.mp3");
+            val = ("১", "এক", "num_1.mp3", "apple.png");
         }
 
         string? voicePath = ResolveVoicePath(val.Voice);
+        string? emojiPath = ResolveEmojiPath(val.Emoji) ?? PickRandomEmoji();
+
         return new SmashContent(
             Glyph: val.Glyph,
             ShapeType: null,
             SecondaryText: val.Word,
-            EmojiPath: PickRandomEmoji(),
+            EmojiPath: emojiPath,
             Color: PickRandomColor(),
             SfxPath: PickRandomSfx(),
             VoicePath: voicePath,
@@ -303,15 +307,17 @@ public class KeyMapService : IKeyMapService
     {
         if (!_letterMap.TryGetValue(key, out var val))
         {
-            val = ("ক", "কলা", "let_k.mp3");
+            val = ("ক", "কলা", "let_k.mp3", "banana.png");
         }
 
         string? voicePath = ResolveVoicePath(val.Voice);
+        string? emojiPath = ResolveEmojiPath(val.Emoji) ?? PickRandomEmoji();
+
         return new SmashContent(
             Glyph: val.Glyph,
             ShapeType: null,
             SecondaryText: val.Word,
-            EmojiPath: PickRandomEmoji(),
+            EmojiPath: emojiPath,
             Color: PickRandomColor(),
             SfxPath: PickRandomSfx(),
             VoicePath: voicePath,
@@ -323,6 +329,13 @@ public class KeyMapService : IKeyMapService
     {
         if (string.IsNullOrEmpty(filename)) return null;
         string path = Path.Combine(_assetsDir, "Sounds", "Voice", filename);
+        return File.Exists(path) ? path : null;
+    }
+
+    private string? ResolveEmojiPath(string? filename)
+    {
+        if (string.IsNullOrEmpty(filename)) return null;
+        string path = Path.Combine(_assetsDir, "Emoji", filename);
         return File.Exists(path) ? path : null;
     }
 
@@ -339,7 +352,7 @@ public class KeyMapService : IKeyMapService
             "Star" => _emojiFiles.FirstOrDefault(f => f.Contains("star")),
             "Heart" => _emojiFiles.FirstOrDefault(f => f.Contains("heart")),
             "Sun" => _emojiFiles.FirstOrDefault(f => f.Contains("sun")),
-            "Moon" => _emojiFiles.FirstOrDefault(f => f.Contains("sparkles") || f.Contains("star")),
+            "Moon" => _emojiFiles.FirstOrDefault(f => f.Contains("moon") || f.Contains("sparkles")),
             "Circle" => _emojiFiles.FirstOrDefault(f => f.Contains("soccer") || f.Contains("balloon")),
             _ => null
         };
