@@ -143,6 +143,12 @@ BabyKeyBoardSmashByMahfoz/
 
 ---
 
+## 🤝 অবদান রাখুন (Contributing)
+
+যেহেতু মূল রিপোজিটরির ব্রাঞ্চটি সুরক্ষিত (Protected Branch), তাই নতুন ফিচার যোগ বা বাগ ফিক্স করতে চাইলে **Fork & Pull Request** পদ্ধতি অনুসরণ করুন। বিস্তারিত নিয়মের জন্য আমাদের [CONTRIBUTING.md](CONTRIBUTING.md) গাইডলাইন দেখুন।
+
+---
+
 ## 📄 লাইসেন্স (License)
 
 - অ্যাপ্লিকেশন সোর্স কোড [MIT License](LICENSE)-এর আওতায় উন্মুক্ত।

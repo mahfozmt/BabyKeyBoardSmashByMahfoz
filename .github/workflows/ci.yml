@@ -1,0 +1,40 @@
+name: CI - Build & Tests
+
+on:
+  pull_request:
+    branches:
+      - master
+  push:
+    branches:
+      - master
+    paths:
+      - 'src/**'
+      - 'tests/**'
+      - 'tools/**'
+      - '*.slnx'
+
+jobs:
+  test:
+    name: Build & Run Unit Tests
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Restore Dependencies
+        run: dotnet restore BabyKeyBoardSmashByMahfoz.slnx
+
+      - name: Build Solution
+        run: dotnet build BabyKeyBoardSmashByMahfoz.slnx -c Release --no-restore
+
+      - name: Publish & Run Automated Unit Tests
+        shell: pwsh
+        run: |
+          dotnet publish tests/BabySmashBN.Tests/BabySmashBN.Tests.csproj -c Release -r win-x64 --self-contained -o tests/bin/Release
+          & "tests/bin/Release/BabySmashBN.Tests.exe"
