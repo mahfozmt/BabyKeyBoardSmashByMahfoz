@@ -12,7 +12,12 @@
     <Authors>Mahfoz</Authors>
     <Description>One-click Setup Installer for BabyKeyBoardSmash</Description>
     <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <ApplicationIcon>app.ico</ApplicationIcon>
   </PropertyGroup>
+
+  <ItemGroup>
+    <Resource Include="app.png" />
+  </ItemGroup>
 
   <ItemGroup>
     <EmbeddedResource Include="app_payload.zip" Condition="Exists('app_payload.zip')" />

@@ -193,6 +193,7 @@ public partial class MainWindow : Window
                 dynamic shortcut = shell.CreateShortcut(shortcutPath);
                 shortcut.TargetPath = targetExePath;
                 shortcut.WorkingDirectory = workingDir;
+                shortcut.IconLocation = targetExePath + ",0";
                 shortcut.Description = "BabyKeyBoardSmash by Mahfoz - ছোটদের বাংলা কীবোর্ড স্ম্যাশ গেম";
                 shortcut.Save();
             }
