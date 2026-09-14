@@ -5,6 +5,15 @@
   <i>A fullscreen, toddler-proof, open-source Bangla keyboard-smash game for Windows.</i>
 </p>
 
+<p align="center">
+  <a href="https://github.com/mahfozmt/BabyKeyBoardSmashByMahfoz/releases/latest/download/BabyKeyBoardSmash_Setup.exe">
+    <img src="https://img.shields.io/badge/📥_Download_Installer-BabyKeyBoardSmash__Setup.exe-2ea44f?style=for-the-badge&logo=windows&logoColor=white" alt="Download BabyKeyBoardSmash Setup" />
+  </a>
+  <a href="https://github.com/mahfozmt/BabyKeyBoardSmashByMahfoz/releases">
+    <img src="https://img.shields.io/badge/📦_GitHub-Releases-blue?style=for-the-badge&logo=github" alt="All Releases" />
+  </a>
+</p>
+
 ---
 
 Scott Hanselman-এর বিখ্যাত [BabySmash](https://github.com/shanselman/babysmash) থেকে অনুপ্রাণিত হয়ে সম্পূর্ণ নতুনভাবে তৈরি একটি ওপেন-সোর্স উইন্ডোজ অ্যাপ্লিকেশন। ছোট বাচ্চারা যখন কম্পিউটারের সামনে বসে কীবোর্ডে বাটন চেপে এলোমেলো চাপাচাপি (keyboard smashing) করে, তখন তাদের জন্য এই অ্যাপটি একটি জাদুকরী ও শিক্ষণীয় অভিজ্ঞতা তৈরি করে:
@@ -24,8 +33,8 @@ Scott Hanselman-এর বিখ্যাত [BabySmash](https://github.com/shan
 
 প্রোগ্রামিং বা কোনো জটিল জ্ঞান ছাড়াই যে কেউ সাধারণ সফটওয়্যারের মতো এটি ইনস্টল করতে পারবেন:
 
-1. **ডাউনলোড / সেটআপ ফাইল**:
-   - রিপোজিটরির `dist/BabyKeyBoardSmash_Setup.exe` ফাইলটি ওপেন করুন (অথবা GitHub Releases থেকে ডাউনলোড করুন)।
+1. **ডাউনলোড করুন (Download)**:
+   - ওপরের সবুজ **[📥 Download BabyKeyBoardSmash_Setup.exe](https://github.com/mahfozmt/BabyKeyBoardSmashByMahfoz/releases/latest/download/BabyKeyBoardSmash_Setup.exe)** বাটনে ক্লিক করুন অথবা GitHub-এর [Releases](https://github.com/mahfozmt/BabyKeyBoardSmashByMahfoz/releases) থেকে ডাউনলোড করে নিন।
 2. **সেটআপ রান করুন**:
    - `BabyKeyBoardSmash_Setup.exe` ফাইলে ডাবল ক্লিক করুন।
    - একটি সুন্দর ডার্ক-থিমের বাংলা ইনস্টলার উইন্ডো চালু হবে।

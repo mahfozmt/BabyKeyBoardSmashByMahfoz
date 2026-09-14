@@ -1,0 +1,70 @@
+name: Build and Release BabyKeyBoardSmash
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Build BabyKeyBoardSmash Setup Installer
+        shell: pwsh
+        run: |
+          ./scripts/build_installer.ps1
+
+      - name: Verify Installer Exists
+        shell: pwsh
+        run: |
+          if (-not (Test-Path "dist/BabyKeyBoardSmash_Setup.exe")) {
+            throw "BabyKeyBoardSmash_Setup.exe was not created!"
+          }
+          Get-Item "dist/BabyKeyBoardSmash_Setup.exe" | Format-List Length, FullName
+
+      - name: Determine Release Tag
+        id: vars
+        shell: pwsh
+        run: |
+          if ($env:GITHUB_REF -like "refs/tags/*") {
+            $tag = $env:GITHUB_REF.Replace("refs/tags/", "")
+          } else {
+            $tag = "v1.0.0"
+          }
+          "tag=$tag" >> $env:GITHUB_OUTPUT
+
+      - name: Create GitHub Release and Upload Installer
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.vars.outputs.tag }}
+          name: "BabyKeyBoardSmash ${{ steps.vars.outputs.tag }}"
+          files: dist/BabyKeyBoardSmash_Setup.exe
+          body: |
+            ## 👶 বেবি কীবোর্ড স্ম্যাশ (BabyKeyBoardSmash) — ${{ steps.vars.outputs.tag }}
+            
+            ছোটদের জন্য ফুলস্ক্রিন নিরাপদ বাংলা বর্ণ ও সংখ্যা শেখার কীবোর্ড গেম।
+            
+            ### 📥 ডাউনলোড ও ইনস্টলেশন (Download & Install)
+            1. নিচে থাকা **`BabyKeyBoardSmash_Setup.exe`** ফাইলে ক্লিক করে ডাউনলোড করুন।
+            2. ফাইলটিতে ডাবল-ক্লিক করে **"ইনস্টল করুন (Install)"** বাটনে চাপুন।
+            3. কোনো অ্যাডমিনিস্ট্রেটর পারমিশন বা পাসওয়ার্ড লাগবে না।
+            4. আপনার ডেস্কটপে স্বয়ংক্রিয়ভাবে গেমের শর্টকাট তৈরি হবে!
+            
+            ### 🛑 গেম বন্ধ করার নিয়ম:
+            - কিবোর্ডের **Escape বাটন ২ সেকেন্ড চেপে ধরে রাখুন**, অথবা
+            - **Alt + F4** চাপুন।
+          draft: false
+          prerelease: false
